@@ -24,10 +24,13 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("🚀 Iniciando processo de login...");
     setIsLoading(true);
 
     try {
-      await signIn(email, password);
+      console.log("📧 Tentando fazer login com email:", email);
+      const result = await signIn(email, password);
+      console.log("✅ Login bem-sucedido:", result);
 
       toast({
         title: "Login realizado com sucesso!",
@@ -35,12 +38,14 @@ const Login = () => {
         variant: "default"
       });
 
+      console.log("⏳ Aguardando 1 segundo antes do redirecionamento...");
       // Pequeno delay para garantir que o estado seja atualizado
       setTimeout(() => {
+        console.log("🔄 Redirecionando para /dashboard...");
         navigate("/dashboard");
       }, 1000);
     } catch (error: any) {
-      console.error("Erro no login:", error);
+      console.error("💥 Erro no login:", error);
 
       let errorMessage = "Email ou senha incorretos.";
 

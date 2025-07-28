@@ -11,13 +11,22 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log("🛡️ ProtectedRoute - Estado:", {
+      isLoading,
+      isAuthenticated,
+      hasUser: !!user
+    });
+
     if (!isLoading && !isAuthenticated) {
-      console.log("Usuário não autenticado, redirecionando para login");
+      console.log("🚫 Usuário não autenticado, redirecionando para login");
       navigate("/login");
+    } else if (!isLoading && isAuthenticated) {
+      console.log("✅ Usuário autenticado, permitindo acesso ao dashboard");
     }
-  }, [isLoading, isAuthenticated, navigate]);
+  }, [isLoading, isAuthenticated, navigate, user]);
 
   if (isLoading) {
+    console.log("⏳ ProtectedRoute - Carregando...");
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -29,9 +38,17 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   if (!isAuthenticated) {
-    return null; // Será redirecionado pelo useEffect
+    console.log("❌ ProtectedRoute - Usuário não autenticado");
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground">Redirecionando...</p>
+        </div>
+      </div>
+    );
   }
 
+  console.log("✅ ProtectedRoute - Renderizando conteúdo protegido");
   return <>{children}</>;
 };
 
