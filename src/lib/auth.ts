@@ -73,7 +73,12 @@ export const getCurrentUser = async (): Promise<User | null> => {
       data: { user }
     } = await supabase.auth.getUser();
 
-    if (!user) return null;
+    if (!user) {
+      console.log("❌ Nenhum usuário autenticado encontrado");
+      return null;
+    }
+
+    console.log("👤 Usuário autenticado encontrado:", user.email);
 
     // Tentar buscar dados da tabela profiles
     try {
@@ -84,9 +89,9 @@ export const getCurrentUser = async (): Promise<User | null> => {
         .single();
 
       if (error) {
-        console.warn("Erro ao buscar perfil:", error);
+        console.warn("⚠️ Erro ao buscar perfil:", error);
         // Se não conseguir buscar o perfil, retornar dados básicos do usuário
-        return {
+        const fallbackUser: User = {
           id: user.id,
           email: user.email || "",
           nome_completo: user.user_metadata?.nome_completo || "Usuário",
@@ -96,16 +101,19 @@ export const getCurrentUser = async (): Promise<User | null> => {
           telefone: user.user_metadata?.telefone || "",
           created_at: user.created_at || new Date().toISOString()
         };
+        console.log("📊 Retornando dados básicos do usuário:", fallbackUser);
+        return fallbackUser;
       }
 
+      console.log("📊 Perfil encontrado na tabela profiles:", profile);
       return profile;
     } catch (profileError) {
       console.warn(
-        "Erro ao buscar perfil, usando dados básicos:",
+        "⚠️ Erro ao buscar perfil, usando dados básicos:",
         profileError
       );
       // Retornar dados básicos do usuário autenticado
-      return {
+      const fallbackUser: User = {
         id: user.id,
         email: user.email || "",
         nome_completo: user.user_metadata?.nome_completo || "Usuário",
@@ -114,9 +122,11 @@ export const getCurrentUser = async (): Promise<User | null> => {
         telefone: user.user_metadata?.telefone || "",
         created_at: user.created_at || new Date().toISOString()
       };
+      console.log("📊 Retornando dados básicos do usuário:", fallbackUser);
+      return fallbackUser;
     }
   } catch (error) {
-    console.error("Erro na autenticação:", error);
+    console.error("💥 Erro na autenticação:", error);
     return null;
   }
 };

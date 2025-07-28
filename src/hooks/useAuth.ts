@@ -57,6 +57,16 @@ export const useAuth = () => {
       } else if (event === "SIGNED_OUT") {
         console.log("🚪 Usuário desconectado");
         setUser(null);
+      } else if (event === "INITIAL_SESSION" && session?.user) {
+        try {
+          console.log("🔄 Sessão inicial encontrada, buscando dados...");
+          const userData = await getCurrentUser();
+          console.log("📊 Dados do usuário da sessão inicial:", userData);
+          setUser(userData);
+        } catch (error) {
+          console.error("💥 Erro ao buscar dados da sessão inicial:", error);
+          setUser(null);
+        }
       }
       setIsLoading(false);
     });
@@ -66,15 +76,16 @@ export const useAuth = () => {
     };
   }, []);
 
+  const isAuthenticated = !!user;
   console.log("🎯 Estado atual do useAuth:", {
     user: !!user,
     isLoading,
-    isAuthenticated: !!user
+    isAuthenticated
   });
 
   return {
     user,
     isLoading,
-    isAuthenticated: !!user
+    isAuthenticated
   };
 };
