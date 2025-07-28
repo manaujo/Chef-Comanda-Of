@@ -35,8 +35,10 @@ const Login = () => {
         variant: "default"
       });
 
-      // Redirecionar para o dashboard após login bem-sucedido
-      navigate("/dashboard");
+      // Pequeno delay para garantir que o estado seja atualizado
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1000);
     } catch (error: any) {
       console.error("Erro no login:", error);
 

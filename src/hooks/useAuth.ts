@@ -10,7 +10,9 @@ export const useAuth = () => {
     // Verificar usuário inicial
     const initAuth = async () => {
       try {
+        console.log("Iniciando verificação de autenticação...");
         const userData = await getCurrentUser();
+        console.log("Dados do usuário:", userData);
         setUser(userData);
       } catch (error) {
         console.error("Erro na autenticação:", error);
@@ -25,15 +27,20 @@ export const useAuth = () => {
     const {
       data: { subscription }
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Evento de autenticação:", event, session?.user?.email);
+
       if (event === "SIGNED_IN" && session?.user) {
         try {
+          console.log("Usuário logado, buscando dados...");
           const userData = await getCurrentUser();
+          console.log("Dados do usuário após login:", userData);
           setUser(userData);
         } catch (error) {
           console.error("Erro ao buscar dados do usuário:", error);
           setUser(null);
         }
       } else if (event === "SIGNED_OUT") {
+        console.log("Usuário desconectado");
         setUser(null);
       }
       setIsLoading(false);

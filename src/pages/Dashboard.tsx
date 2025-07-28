@@ -48,8 +48,13 @@ const Dashboard = () => {
   }
 
   if (!user) {
-    navigate("/login");
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground">Redirecionando...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

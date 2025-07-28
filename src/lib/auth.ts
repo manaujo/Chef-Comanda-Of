@@ -68,20 +68,57 @@ export const signOut = async () => {
 };
 
 export const getCurrentUser = async (): Promise<User | null> => {
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  try {
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
 
-  if (!user) return null;
+    if (!user) return null;
 
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
+    // Tentar buscar dados da tabela profiles
+    try {
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
 
-  if (error) throw error;
-  return profile;
+      if (error) {
+        console.warn("Erro ao buscar perfil:", error);
+        // Se não conseguir buscar o perfil, retornar dados básicos do usuário
+        return {
+          id: user.id,
+          email: user.email || "",
+          nome_completo: user.user_metadata?.nome_completo || "Usuário",
+          nome_restaurante:
+            user.user_metadata?.nome_restaurante || "Restaurante",
+          cpf: user.user_metadata?.cpf || "",
+          telefone: user.user_metadata?.telefone || "",
+          created_at: user.created_at || new Date().toISOString()
+        };
+      }
+
+      return profile;
+    } catch (profileError) {
+      console.warn(
+        "Erro ao buscar perfil, usando dados básicos:",
+        profileError
+      );
+      // Retornar dados básicos do usuário autenticado
+      return {
+        id: user.id,
+        email: user.email || "",
+        nome_completo: user.user_metadata?.nome_completo || "Usuário",
+        nome_restaurante: user.user_metadata?.nome_restaurante || "Restaurante",
+        cpf: user.user_metadata?.cpf || "",
+        telefone: user.user_metadata?.telefone || "",
+        created_at: user.created_at || new Date().toISOString()
+      };
+    }
+  } catch (error) {
+    console.error("Erro na autenticação:", error);
+    return null;
+  }
 };
 
 export const getSession = async () => {
