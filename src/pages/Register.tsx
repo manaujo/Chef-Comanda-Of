@@ -1,17 +1,25 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChefHat, UserPlus, Eye, EyeOff, Building } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { signUp } from "@/lib/auth";
 
 const Register = () => {
   const [searchParams] = useSearchParams();
-  const planoSelecionado = searchParams.get('plano') || 'mensal';
-  
+  const planoSelecionado = searchParams.get("plano") || "mensal";
+  const navigate = useNavigate();
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -28,31 +36,31 @@ const Register = () => {
 
   const formatCPF = (value: string) => {
     return value
-      .replace(/\D/g, '')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
-      .replace(/(-\d{2})\d+?$/, '$1');
+      .replace(/\D/g, "")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})/, "$1-$2")
+      .replace(/(-\d{2})\d+?$/, "$1");
   };
 
   const formatPhone = (value: string) => {
     return value
-      .replace(/\D/g, '')
-      .replace(/(\d{2})(\d)/, '($1) $2')
-      .replace(/(\d{5})(\d)/, '$1-$2')
-      .replace(/(-\d{4})\d+?$/, '$1');
+      .replace(/\D/g, "")
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{5})(\d)/, "$1-$2")
+      .replace(/(-\d{4})\d+?$/, "$1");
   };
 
   const handleInputChange = (field: string, value: string) => {
     let formattedValue = value;
-    
-    if (field === 'cpf') {
+
+    if (field === "cpf") {
       formattedValue = formatCPF(value);
-    } else if (field === 'telefone') {
+    } else if (field === "telefone") {
       formattedValue = formatPhone(value);
     }
-    
-    setFormData(prev => ({
+
+    setFormData((prev) => ({
       ...prev,
       [field]: formattedValue
     }));
@@ -60,27 +68,67 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (formData.password !== formData.confirmPassword) {
       toast({
         title: "Erro",
         description: "As senhas não coincidem.",
-        variant: "destructive",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      toast({
+        title: "Erro",
+        description: "A senha deve ter pelo menos 6 caracteres.",
+        variant: "destructive"
       });
       return;
     }
 
     setIsLoading(true);
 
-    // Simular registro (será substituído pela integração com Supabase)
-    setTimeout(() => {
-      toast({
-        title: "Funcionalidade em desenvolvimento",
-        description: "O registro será implementado com a integração do Supabase.",
-        variant: "default",
+    try {
+      await signUp({
+        email: formData.email,
+        password: formData.password,
+        nome_completo: formData.nomeCompleto,
+        nome_restaurante: formData.nomeRestaurante,
+        cpf: formData.cpf.replace(/\D/g, ""),
+        telefone: formData.telefone.replace(/\D/g, "")
       });
+
+      toast({
+        title: "Conta criada com sucesso!",
+        description: "Verifique seu email para confirmar a conta.",
+        variant: "default"
+      });
+
+      navigate("/login");
+    } catch (error: any) {
+      console.error("Erro no registro:", error);
+
+      let errorMessage = "Erro ao criar conta. Tente novamente.";
+
+      if (error.message?.includes("User already registered")) {
+        errorMessage = "Este email já está cadastrado.";
+      } else if (error.message?.includes("Invalid email")) {
+        errorMessage = "Email inválido.";
+      } else if (
+        error.message?.includes("Password should be at least 6 characters")
+      ) {
+        errorMessage = "A senha deve ter pelo menos 6 caracteres.";
+      }
+
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -99,14 +147,18 @@ const Register = () => {
             <CardDescription>
               Cadastre seu restaurante e comece o teste grátis por 14 dias
             </CardDescription>
-            
+
             <div className="flex justify-center mt-4">
-              <Badge variant="secondary" className="bg-gradient-warm text-secondary-foreground">
-                Plano {planoSelecionado === 'anual' ? 'Anual' : 'Mensal'} selecionado
+              <Badge
+                variant="secondary"
+                className="bg-gradient-warm text-secondary-foreground"
+              >
+                Plano {planoSelecionado === "anual" ? "Anual" : "Mensal"}{" "}
+                selecionado
               </Badge>
             </div>
           </CardHeader>
-          
+
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -119,18 +171,24 @@ const Register = () => {
                     id="nomeRestaurante"
                     placeholder="Ex: Restaurante do João"
                     value={formData.nomeRestaurante}
-                    onChange={(e) => handleInputChange('nomeRestaurante', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("nomeRestaurante", e.target.value)
+                    }
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="nomeCompleto">Nome Completo (Responsável)</Label>
+                  <Label htmlFor="nomeCompleto">
+                    Nome Completo (Responsável)
+                  </Label>
                   <Input
                     id="nomeCompleto"
                     placeholder="Seu nome completo"
                     value={formData.nomeCompleto}
-                    onChange={(e) => handleInputChange('nomeCompleto', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("nomeCompleto", e.target.value)
+                    }
                     required
                   />
                 </div>
@@ -143,7 +201,7 @@ const Register = () => {
                     id="cpf"
                     placeholder="000.000.000-00"
                     value={formData.cpf}
-                    onChange={(e) => handleInputChange('cpf', e.target.value)}
+                    onChange={(e) => handleInputChange("cpf", e.target.value)}
                     maxLength={14}
                     required
                   />
@@ -155,7 +213,9 @@ const Register = () => {
                     id="telefone"
                     placeholder="(11) 99999-9999"
                     value={formData.telefone}
-                    onChange={(e) => handleInputChange('telefone', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("telefone", e.target.value)
+                    }
                     maxLength={15}
                     required
                   />
@@ -169,7 +229,7 @@ const Register = () => {
                   type="email"
                   placeholder="seu@email.com"
                   value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
                   required
                 />
               </div>
@@ -183,7 +243,9 @@ const Register = () => {
                       type={showPassword ? "text" : "password"}
                       placeholder="Mínimo 6 caracteres"
                       value={formData.password}
-                      onChange={(e) => handleInputChange('password', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("password", e.target.value)
+                      }
                       minLength={6}
                       required
                     />
@@ -211,7 +273,9 @@ const Register = () => {
                       type={showConfirmPassword ? "text" : "password"}
                       placeholder="Digite a senha novamente"
                       value={formData.confirmPassword}
-                      onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("confirmPassword", e.target.value)
+                      }
                       required
                     />
                     <Button
@@ -219,7 +283,9 @@ const Register = () => {
                       variant="ghost"
                       size="sm"
                       className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
                     >
                       {showConfirmPassword ? (
                         <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -231,9 +297,9 @@ const Register = () => {
                 </div>
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full" 
+              <Button
+                type="submit"
+                className="w-full"
                 variant="hero"
                 disabled={isLoading}
                 size="lg"
@@ -256,10 +322,10 @@ const Register = () => {
                   Fazer login
                 </Link>
               </div>
-              
+
               <div className="pt-4 border-t border-border">
-                <Link 
-                  to="/" 
+                <Link
+                  to="/"
                   className="text-sm text-muted-foreground hover:text-primary transition-smooth"
                 >
                   ← Voltar ao site
@@ -272,7 +338,10 @@ const Register = () => {
                   Termos de Uso
                 </Link>{" "}
                 e{" "}
-                <Link to="/privacidade" className="text-primary hover:underline">
+                <Link
+                  to="/privacidade"
+                  className="text-primary hover:underline"
+                >
                   Política de Privacidade
                 </Link>
               </div>

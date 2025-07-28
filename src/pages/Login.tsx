@@ -1,46 +1,63 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChefHat, LogIn, Eye, EyeOff } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { signIn } from "@/lib/auth";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [cpf, setCpf] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-
-  const formatCPF = (value: string) => {
-    return value
-      .replace(/\D/g, '')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
-      .replace(/(-\d{2})\d+?$/, '$1');
-  };
-
-  const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatCPF(e.target.value);
-    setCpf(formatted);
-  };
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simular login (será substituído pela integração com Supabase)
-    setTimeout(() => {
+    try {
+      await signIn(email, password);
+
       toast({
-        title: "Funcionalidade em desenvolvimento",
-        description: "A autenticação será implementada com a integração do Supabase.",
-        variant: "default",
+        title: "Login realizado com sucesso!",
+        description: "Bem-vindo ao ChefComanda.",
+        variant: "default"
       });
+
+      // Redirecionar para o dashboard após login bem-sucedido
+      navigate("/dashboard");
+    } catch (error: any) {
+      console.error("Erro no login:", error);
+
+      let errorMessage = "Email ou senha incorretos.";
+
+      if (error.message?.includes("Invalid login credentials")) {
+        errorMessage = "Email ou senha incorretos.";
+      } else if (error.message?.includes("Email not confirmed")) {
+        errorMessage = "Por favor, confirme seu email antes de fazer login.";
+      } else if (error.message?.includes("Too many requests")) {
+        errorMessage = "Muitas tentativas. Tente novamente em alguns minutos.";
+      }
+
+      toast({
+        title: "Erro no login",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -57,20 +74,20 @@ const Login = () => {
               ChefComanda
             </CardTitle>
             <CardDescription>
-              Entre com seu CPF e senha para acessar o sistema
+              Entre com seu email e senha para acessar o sistema
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="cpf">CPF</Label>
+                <Label htmlFor="email">E-mail</Label>
                 <Input
-                  id="cpf"
-                  placeholder="000.000.000-00"
-                  value={cpf}
-                  onChange={handleCPFChange}
-                  maxLength={14}
+                  id="email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
@@ -102,9 +119,9 @@ const Login = () => {
                 </div>
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full" 
+              <Button
+                type="submit"
+                className="w-full"
                 variant="hero"
                 disabled={isLoading}
               >
@@ -120,23 +137,23 @@ const Login = () => {
             </form>
 
             <div className="mt-6 text-center space-y-2">
-              <Link 
-                to="/esqueci-senha" 
+              <Link
+                to="/esqueci-senha"
                 className="text-sm text-primary hover:underline"
               >
                 Esqueci minha senha
               </Link>
-              
+
               <div className="text-sm text-muted-foreground">
                 Não tem uma conta?{" "}
                 <Link to="/registro" className="text-primary hover:underline">
                   Criar conta
                 </Link>
               </div>
-              
+
               <div className="pt-4 border-t border-border">
-                <Link 
-                  to="/" 
+                <Link
+                  to="/"
                   className="text-sm text-muted-foreground hover:text-primary transition-smooth"
                 >
                   ← Voltar ao site
