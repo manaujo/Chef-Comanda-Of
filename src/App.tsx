@@ -8,6 +8,15 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Mesas from "./pages/Mesas";
+import Comandas from "./pages/Comandas";
+import Cozinha from "./pages/Cozinha";
+import PDV from "./pages/PDV";
+import Produtos from "./pages/Produtos";
+import Estoque from "./pages/Estoque";
+import Turnos from "./pages/Turnos";
+import Relatorios from "./pages/Relatorios";
+import Funcionarios from "./pages/Funcionarios";
+import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -36,6 +45,78 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Mesas />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/comandas"
+            element={
+              <ProtectedRoute>
+                <Comandas />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/cozinha"
+            element={
+              <ProtectedRoute>
+                <Cozinha />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pdv"
+            element={
+              <ProtectedRoute>
+                <PDV />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/produtos"
+            element={
+              <ProtectedRoute>
+                <Produtos />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/estoque"
+            element={
+              <ProtectedRoute>
+                <Estoque />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/turnos"
+            element={
+              <ProtectedRoute>
+                <Turnos />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/relatorios"
+            element={
+              <ProtectedRoute>
+                <Relatorios />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/funcionarios"
+            element={
+              <ProtectedRoute>
+                <Funcionarios />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/configuracoes"
+            element={
+              <ProtectedRoute>
+                <Configuracoes />
               </ProtectedRoute>
             }
           />

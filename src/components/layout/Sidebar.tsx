@@ -40,7 +40,7 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
       await signOut();
       toast({
         title: "Logout realizado",
-        description: "Você foi desconectado com sucesso.",
+        description: "Você foi desconectado com sucesso."
       });
       navigate("/");
     } catch (error) {
@@ -48,7 +48,7 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
       toast({
         title: "Erro",
         description: "Erro ao fazer logout.",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
@@ -122,8 +122,8 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
     }
   ];
 
-  const filteredMenuItems = menuItems.filter(item => 
-    user && item.roles.includes(user.tipo)
+  const filteredMenuItems = menuItems.filter(
+    (item) => user // Mostrar todos os itens para usuários autenticados
   );
 
   const isActive = (href: string) => location.pathname === href;
@@ -132,18 +132,20 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
     <>
       {/* Mobile overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={onToggle}
         />
       )}
 
       {/* Sidebar */}
-      <div className={`
+      <div
+        className={`
         fixed top-0 left-0 h-full w-64 bg-card border-r border-border z-50 transform transition-transform duration-300 ease-in-out
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0 lg:static lg:z-auto
-      `}>
+        ${isOpen ? "translate-x-0" : "-translate-x-full"}
+        lg:static lg:translate-x-0 lg:z-auto lg:flex-shrink-0 lg:w-64
+      `}
+      >
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border">
@@ -176,7 +178,7 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
                   {user?.nome_completo}
                 </p>
                 <p className="text-xs text-muted-foreground capitalize">
-                  {user?.tipo}
+                  Usuário
                 </p>
               </div>
             </div>
@@ -196,9 +198,10 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
                   }}
                   className={`
                     flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
-                    ${isActive(item.href)
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                    ${
+                      isActive(item.href)
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent"
                     }
                   `}
                 >

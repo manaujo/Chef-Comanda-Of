@@ -2,13 +2,35 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Coffee, Plus, Edit, QrCode, Users, CheckCircle, Clock, AlertTriangle, Settings } from "lucide-react";
+import {
+  Coffee,
+  Plus,
+  Edit,
+  QrCode,
+  Users,
+  CheckCircle,
+  Clock,
+  AlertTriangle,
+  Settings
+} from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { mesasService } from "@/lib/database";
 import type { Mesa, MesaStatus } from "@/types/database";
@@ -21,11 +43,11 @@ const Mesas = () => {
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
-    numero: '',
-    nome: '',
-    capacidade: '4',
-    status: 'livre' as MesaStatus,
-    observacoes: ''
+    numero: "",
+    nome: "",
+    capacidade: "4",
+    status: "livre" as MesaStatus,
+    observacoes: ""
   });
 
   useEffect(() => {
@@ -38,11 +60,11 @@ const Mesas = () => {
       const data = await mesasService.getAll();
       setMesas(data);
     } catch (error) {
-      console.error('Erro ao carregar mesas:', error);
+      console.error("Erro ao carregar mesas:", error);
       toast({
         title: "Erro",
         description: "Erro ao carregar mesas.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
@@ -51,7 +73,7 @@ const Mesas = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       const mesaData = {
         numero: parseInt(formData.numero),
@@ -66,13 +88,13 @@ const Mesas = () => {
         await mesasService.update(editingMesa.id, mesaData);
         toast({
           title: "Mesa atualizada",
-          description: "Mesa atualizada com sucesso.",
+          description: "Mesa atualizada com sucesso."
         });
       } else {
         await mesasService.create(mesaData);
         toast({
           title: "Mesa criada",
-          description: "Mesa criada com sucesso.",
+          description: "Mesa criada com sucesso."
         });
       }
 
@@ -80,11 +102,11 @@ const Mesas = () => {
       resetForm();
       loadMesas();
     } catch (error: any) {
-      console.error('Erro ao salvar mesa:', error);
+      console.error("Erro ao salvar mesa:", error);
       toast({
         title: "Erro",
         description: error.message || "Erro ao salvar mesa.",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
@@ -93,10 +115,10 @@ const Mesas = () => {
     setEditingMesa(mesa);
     setFormData({
       numero: mesa.numero.toString(),
-      nome: mesa.nome || '',
+      nome: mesa.nome || "",
       capacidade: mesa.capacidade.toString(),
       status: mesa.status,
-      observacoes: mesa.observacoes || ''
+      observacoes: mesa.observacoes || ""
     });
     setDialogOpen(true);
   };
@@ -106,39 +128,39 @@ const Mesas = () => {
       await mesasService.updateStatus(mesa.id, newStatus);
       toast({
         title: "Status atualizado",
-        description: `Mesa ${mesa.numero} marcada como ${newStatus}.`,
+        description: `Mesa ${mesa.numero} marcada como ${newStatus}.`
       });
       loadMesas();
     } catch (error) {
-      console.error('Erro ao atualizar status:', error);
+      console.error("Erro ao atualizar status:", error);
       toast({
         title: "Erro",
         description: "Erro ao atualizar status da mesa.",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
 
   const resetForm = () => {
     setFormData({
-      numero: '',
-      nome: '',
-      capacidade: '4',
-      status: 'livre',
-      observacoes: ''
+      numero: "",
+      nome: "",
+      capacidade: "4",
+      status: "livre",
+      observacoes: ""
     });
     setEditingMesa(null);
   };
 
   const getStatusIcon = (status: MesaStatus) => {
     switch (status) {
-      case 'livre':
+      case "livre":
         return <CheckCircle className="h-4 w-4" />;
-      case 'ocupada':
+      case "ocupada":
         return <Clock className="h-4 w-4" />;
-      case 'reservada':
+      case "reservada":
         return <Users className="h-4 w-4" />;
-      case 'manutencao':
+      case "manutencao":
         return <Settings className="h-4 w-4" />;
       default:
         return <AlertTriangle className="h-4 w-4" />;
@@ -147,16 +169,16 @@ const Mesas = () => {
 
   const getStatusColor = (status: MesaStatus) => {
     switch (status) {
-      case 'livre':
-        return 'default';
-      case 'ocupada':
-        return 'destructive';
-      case 'reservada':
-        return 'secondary';
-      case 'manutencao':
-        return 'outline';
+      case "livre":
+        return "default";
+      case "ocupada":
+        return "destructive";
+      case "reservada":
+        return "secondary";
+      case "manutencao":
+        return "outline";
       default:
-        return 'outline';
+        return "outline";
     }
   };
 
@@ -172,22 +194,22 @@ const Mesas = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 lg:space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center space-x-2">
-              <Coffee className="h-8 w-8" />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 lg:gap-4">
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold flex items-center space-x-2">
+              <Coffee className="h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10" />
               <span>Mesas</span>
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base lg:text-lg text-muted-foreground mt-1">
               Gerencie as mesas do seu restaurante
             </p>
           </div>
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={resetForm}>
+              <Button onClick={resetForm} className="flex-shrink-0">
                 <Plus className="h-4 w-4 mr-2" />
                 Nova Mesa
               </Button>
@@ -195,7 +217,7 @@ const Mesas = () => {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>
-                  {editingMesa ? 'Editar Mesa' : 'Nova Mesa'}
+                  {editingMesa ? "Editar Mesa" : "Nova Mesa"}
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -206,7 +228,9 @@ const Mesas = () => {
                       id="numero"
                       type="number"
                       value={formData.numero}
-                      onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, numero: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -216,7 +240,9 @@ const Mesas = () => {
                       id="capacidade"
                       type="number"
                       value={formData.capacidade}
-                      onChange={(e) => setFormData({ ...formData, capacidade: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, capacidade: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -227,14 +253,21 @@ const Mesas = () => {
                   <Input
                     id="nome"
                     value={formData.nome}
-                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, nome: e.target.value })
+                    }
                     placeholder="Ex: Mesa VIP, Mesa da Janela..."
                   />
                 </div>
 
                 <div>
                   <Label htmlFor="status">Status</Label>
-                  <Select value={formData.status} onValueChange={(value: MesaStatus) => setFormData({ ...formData, status: value })}>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value: MesaStatus) =>
+                      setFormData({ ...formData, status: value })
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -252,17 +285,23 @@ const Mesas = () => {
                   <Textarea
                     id="observacoes"
                     value={formData.observacoes}
-                    onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, observacoes: e.target.value })
+                    }
                     placeholder="Observações sobre a mesa..."
                   />
                 </div>
 
                 <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDialogOpen(false)}
+                  >
                     Cancelar
                   </Button>
                   <Button type="submit">
-                    {editingMesa ? 'Atualizar' : 'Criar'}
+                    {editingMesa ? "Atualizar" : "Criar"}
                   </Button>
                 </div>
               </form>
@@ -271,65 +310,67 @@ const Mesas = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-6 gap-3 lg:gap-4">
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center space-x-2">
                 <CheckCircle className="h-4 w-4 text-green-600" />
-                <span className="text-sm font-medium">Livres</span>
+                <span className="text-xs sm:text-sm font-medium">Livres</span>
               </div>
-              <div className="text-2xl font-bold">
-                {mesas.filter(m => m.status === 'livre').length}
+              <div className="text-lg sm:text-xl lg:text-2xl font-bold">
+                {mesas.filter((m) => m.status === "livre").length}
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center space-x-2">
                 <Clock className="h-4 w-4 text-red-600" />
-                <span className="text-sm font-medium">Ocupadas</span>
+                <span className="text-xs sm:text-sm font-medium">Ocupadas</span>
               </div>
-              <div className="text-2xl font-bold">
-                {mesas.filter(m => m.status === 'ocupada').length}
+              <div className="text-lg sm:text-xl lg:text-2xl font-bold">
+                {mesas.filter((m) => m.status === "ocupada").length}
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center space-x-2">
                 <Users className="h-4 w-4 text-blue-600" />
-                <span className="text-sm font-medium">Reservadas</span>
+                <span className="text-xs sm:text-sm font-medium">
+                  Reservadas
+                </span>
               </div>
-              <div className="text-2xl font-bold">
-                {mesas.filter(m => m.status === 'reservada').length}
+              <div className="text-lg sm:text-xl lg:text-2xl font-bold">
+                {mesas.filter((m) => m.status === "reservada").length}
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center space-x-2">
                 <Settings className="h-4 w-4 text-gray-600" />
-                <span className="text-sm font-medium">Manutenção</span>
+                <span className="text-xs sm:text-sm font-medium">
+                  Manutenção
+                </span>
               </div>
-              <div className="text-2xl font-bold">
-                {mesas.filter(m => m.status === 'manutencao').length}
+              <div className="text-lg sm:text-xl lg:text-2xl font-bold">
+                {mesas.filter((m) => m.status === "manutencao").length}
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Mesas Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-3 lg:gap-4">
           {mesas.map((mesa) => (
             <Card key={mesa.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">
-                    Mesa {mesa.numero}
-                  </CardTitle>
+                  <CardTitle className="text-lg">Mesa {mesa.numero}</CardTitle>
                   <Badge variant={getStatusColor(mesa.status)}>
                     {getStatusIcon(mesa.status)}
                     <span className="ml-1 capitalize">{mesa.status}</span>
@@ -362,12 +403,12 @@ const Mesas = () => {
                     <Edit className="h-3 w-3 mr-1" />
                     Editar
                   </Button>
-                  
+
                   {mesa.qr_code && (
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => window.open(mesa.qr_code, '_blank')}
+                      onClick={() => window.open(mesa.qr_code, "_blank")}
                     >
                       <QrCode className="h-3 w-3" />
                     </Button>
@@ -376,31 +417,31 @@ const Mesas = () => {
 
                 {/* Status Actions */}
                 <div className="flex flex-wrap gap-1">
-                  {mesa.status !== 'livre' && (
+                  {mesa.status !== "livre" && (
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleStatusChange(mesa, 'livre')}
+                      onClick={() => handleStatusChange(mesa, "livre")}
                       className="text-xs"
                     >
                       Liberar
                     </Button>
                   )}
-                  {mesa.status !== 'ocupada' && (
+                  {mesa.status !== "ocupada" && (
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleStatusChange(mesa, 'ocupada')}
+                      onClick={() => handleStatusChange(mesa, "ocupada")}
                       className="text-xs"
                     >
                       Ocupar
                     </Button>
                   )}
-                  {mesa.status !== 'reservada' && (
+                  {mesa.status !== "reservada" && (
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleStatusChange(mesa, 'reservada')}
+                      onClick={() => handleStatusChange(mesa, "reservada")}
                       className="text-xs"
                     >
                       Reservar
@@ -416,7 +457,9 @@ const Mesas = () => {
           <Card>
             <CardContent className="text-center py-12">
               <Coffee className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhuma mesa cadastrada</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                Nenhuma mesa cadastrada
+              </h3>
               <p className="text-muted-foreground mb-4">
                 Comece criando sua primeira mesa para organizar o atendimento.
               </p>
