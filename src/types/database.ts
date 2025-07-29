@@ -112,7 +112,13 @@ export interface Comanda {
   data_fechamento?: string;
   valor_total: number;
   mesa?: Mesa;
-  garcom?: Profile;
+  garcom?: {
+    id: string;
+    nome: string;
+    cpf: string;
+    tipo: UserType;
+    ativo: boolean;
+  };
   itens?: ComandaItem[];
   created_at: string;
   updated_at: string;

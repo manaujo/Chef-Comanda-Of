@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { funcionariosService } from './funcionarios';
 import type { 
   Profile, 
   Mesa, 
@@ -280,7 +281,7 @@ export const comandasService = {
       .select(`
         *,
         mesa:mesas(*),
-        garcom:profiles(*),
+        garcom:funcionarios(*),
         itens:comanda_itens(
           *,
           produto:produtos(*)
@@ -298,7 +299,7 @@ export const comandasService = {
       .select(`
         *,
         mesa:mesas(*),
-        garcom:profiles(*),
+        garcom:funcionarios(*),
         itens:comanda_itens(
           *,
           produto:produtos(*)
@@ -317,7 +318,7 @@ export const comandasService = {
       .select(`
         *,
         mesa:mesas(*),
-        garcom:profiles(*),
+        garcom:funcionarios(*),
         itens:comanda_itens(
           *,
           produto:produtos(*)
@@ -337,7 +338,7 @@ export const comandasService = {
       .select(`
         *,
         mesa:mesas(*),
-        garcom:profiles(*),
+        garcom:funcionarios(*),
         itens:comanda_itens(
           *,
           produto:produtos(*)
@@ -351,13 +352,23 @@ export const comandasService = {
   },
 
   async create(comanda: Omit<Comanda, 'id' | 'numero' | 'created_at' | 'updated_at' | 'valor_total'>) {
+    // Obter o funcionário atual para usar como garçom
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+    
+    const funcionario = await funcionariosService.getByUserId(user.id);
+    if (!funcionario) throw new Error('Funcionário não encontrado');
+    
     const { data, error } = await supabase
       .from('comandas')
-      .insert(comanda)
+      .insert({
+        ...comanda,
+        garcom_id: funcionario.user_id
+      })
       .select(`
         *,
         mesa:mesas(*),
-        garcom:profiles(*)
+        garcom:funcionarios(*)
       `)
       .single();
     
@@ -373,7 +384,7 @@ export const comandasService = {
       .select(`
         *,
         mesa:mesas(*),
-        garcom:profiles(*)
+        garcom:funcionarios(*)
       `)
       .single();
     

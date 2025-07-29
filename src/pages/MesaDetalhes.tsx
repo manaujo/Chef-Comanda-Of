@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useFuncionario } from "@/hooks/useFuncionario";
 import {
   Coffee,
   Plus,
@@ -40,6 +41,7 @@ const MesaDetalhes = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { funcionario } = useFuncionario();
   const { toast } = useToast();
 
   const [mesa, setMesa] = useState<Mesa | null>(null);
@@ -314,25 +316,27 @@ const MesaDetalhes = () => {
                   {comanda.itens.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between p-3 border rounded-lg"
+                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                     >
                       <div className="flex-1">
                         <div className="font-medium">
                           {item.quantidade}x {item.produto?.nome}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          R$ {item.preco_unitario.toFixed(2)} cada
                         </div>
                         {item.observacoes && (
                           <div className="text-sm text-muted-foreground">
                             Obs: {item.observacoes}
                           </div>
                         )}
+                        <div className="text-xs text-muted-foreground">
+                          R$ {item.preco_unitario.toFixed(2)} cada
+                        </div>
                       </div>
                       <div className="flex items-center space-x-3">
-                        <span className="font-medium">
+                        <div className="text-right">
+                          <div className="font-bold">
                           R$ {(item.quantidade * item.preco_unitario).toFixed(2)}
-                        </span>
+                          </div>
+                        </div>
                         <Badge variant={getStatusColor(item.status)}>
                           {getStatusIcon(item.status)}
                           <span className="ml-1 capitalize">
@@ -423,7 +427,8 @@ const MesaDetalhes = () => {
         </div>
 
         {/* Verificar permissões para mostrar aviso */}
-        {user?.tipo !== 'administrador' && user?.tipo !== 'garcom' && (
+        {(user?.tipo !== 'administrador' && user?.tipo !== 'garcom') &&
+         (funcionario?.tipo !== 'administrador' && funcionario?.tipo !== 'garcom') && (
           <Card className="bg-yellow-50 border-yellow-200">
             <CardContent className="p-4 text-center">
               <p className="text-yellow-800">
@@ -519,7 +524,10 @@ const MesaDetalhes = () => {
                   </Button>
                   <Button 
                     onClick={handleAdicionarItem}
-                    disabled={user?.tipo !== 'administrador' && user?.tipo !== 'garcom'}
+                    disabled={
+                      (user?.tipo !== 'administrador' && user?.tipo !== 'garcom') &&
+                      (funcionario?.tipo !== 'administrador' && funcionario?.tipo !== 'garcom')
+                    }
                   >
                     <ShoppingCart className="h-4 w-4 mr-2" />
                     Adicionar à Comanda

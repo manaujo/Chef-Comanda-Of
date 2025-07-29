@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
+import { useFuncionario } from "@/hooks/useFuncionario";
 import { signOut } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -31,6 +32,7 @@ interface SidebarProps {
 
 const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
   const { user } = useAuth();
+  const { funcionario } = useFuncionario();
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -111,7 +113,7 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
     {
       title: "Funcionários",
       icon: Users,
-      href: "/funcionarios",
+      href: "/gerenciar-funcionarios",
       roles: ["administrador"]
     },
     {
@@ -123,7 +125,9 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
   ];
 
   const filteredMenuItems = menuItems.filter(
-    (item) => user && item.roles.includes(user.tipo)
+    (item) => 
+      (user && item.roles.includes(user.tipo)) ||
+      (funcionario && item.roles.includes(funcionario.tipo))
   );
 
   const isActive = (href: string) => location.pathname === href;
@@ -170,15 +174,15 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
                 <span className="text-primary font-semibold">
-                  {user?.nome_completo.charAt(0).toUpperCase()}
+                  {(user?.nome_completo || funcionario?.nome || 'U').charAt(0).toUpperCase()}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">
-                  {user?.nome_completo}
+                  {user?.nome_completo || funcionario?.nome || 'Usuário'}
                 </p>
                 <p className="text-xs text-muted-foreground capitalize">
-                  Usuário
+                  {funcionario?.tipo || 'Usuário'}
                 </p>
               </div>
             </div>
