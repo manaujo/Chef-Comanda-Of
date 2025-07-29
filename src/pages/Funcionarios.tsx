@@ -22,9 +22,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Users, UserCheck, UserX, Mail, Phone } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { profilesService } from "@/lib/database";
+import { useAuth } from "@/hooks/useAuth";
 import type { Profile, UserType } from "@/types/database";
 
 const Funcionarios = () => {
+  const { user } = useAuth();
   const [funcionarios, setFuncionarios] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -41,6 +43,9 @@ const Funcionarios = () => {
     tipo: "garcom" as UserType,
     ativo: true
   });
+
+  // Check if user is admin
+  const isAdmin = user?.tipo === 'administrador';
 
   useEffect(() => {
     loadFuncionarios();
@@ -231,7 +236,11 @@ const Funcionarios = () => {
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={resetForm} className="flex-shrink-0">
+              <Button 
+                onClick={resetForm} 
+                className="flex-shrink-0"
+                disabled={!isAdmin}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Funcionário
               </Button>
@@ -357,7 +366,7 @@ const Funcionarios = () => {
                   >
                     Cancelar
                   </Button>
-                  <Button type="submit">
+                  <Button type="submit" disabled={!isAdmin}>
                     {editingFuncionario ? "Atualizar" : "Criar"}
                   </Button>
                 </div>
@@ -470,6 +479,7 @@ const Funcionarios = () => {
                     size="sm"
                     onClick={() => handleEdit(funcionario)}
                     className="flex-1"
+                    disabled={!isAdmin}
                   >
                     <Edit className="h-3 w-3 mr-1" />
                     Editar
@@ -479,6 +489,7 @@ const Funcionarios = () => {
                     variant={funcionario.ativo ? "destructive" : "default"}
                     size="sm"
                     onClick={() => handleToggleStatus(funcionario)}
+                    disabled={!isAdmin}
                   >
                     {funcionario.ativo ? (
                       <UserX className="h-3 w-3" />
@@ -502,7 +513,10 @@ const Funcionarios = () => {
               <p className="text-muted-foreground mb-4">
                 Comece cadastrando os funcionários do seu restaurante.
               </p>
-              <Button onClick={() => setDialogOpen(true)}>
+              <Button 
+                onClick={() => setDialogOpen(true)}
+                disabled={!isAdmin}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Cadastrar primeiro funcionário
               </Button>

@@ -123,7 +123,7 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
   ];
 
   const filteredMenuItems = menuItems.filter(
-    (item) => user // Mostrar todos os itens para usuários autenticados
+    (item) => user && item.roles.includes(user.tipo)
   );
 
   const isActive = (href: string) => location.pathname === href;
