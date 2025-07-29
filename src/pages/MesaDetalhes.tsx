@@ -422,6 +422,17 @@ const MesaDetalhes = () => {
           ))}
         </div>
 
+        {/* Verificar permissões para mostrar aviso */}
+        {user?.tipo !== 'administrador' && user?.tipo !== 'garcom' && (
+          <Card className="bg-yellow-50 border-yellow-200">
+            <CardContent className="p-4 text-center">
+              <p className="text-yellow-800">
+                Apenas garçons podem adicionar itens às comandas.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Dialog para Adicionar Item */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent>
@@ -506,7 +517,10 @@ const MesaDetalhes = () => {
                   >
                     Cancelar
                   </Button>
-                  <Button onClick={handleAdicionarItem}>
+                  <Button 
+                    onClick={handleAdicionarItem}
+                    disabled={user?.tipo !== 'administrador' && user?.tipo !== 'garcom'}
+                  >
                     <ShoppingCart className="h-4 w-4 mr-2" />
                     Adicionar à Comanda
                   </Button>

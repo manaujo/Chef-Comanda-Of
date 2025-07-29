@@ -311,6 +311,26 @@ export const comandasService = {
     return data as Comanda[];
   },
 
+  async getByMesa(mesaId: string) {
+    const { data, error } = await supabase
+      .from('comandas')
+      .select(`
+        *,
+        mesa:mesas(*),
+        garcom:profiles(*),
+        itens:comanda_itens(
+          *,
+          produto:produtos(*)
+        )
+      `)
+      .eq('mesa_id', mesaId)
+      .eq('status', 'aberta')
+      .single();
+    
+    if (error && error.code !== 'PGRST116') throw error;
+    return data as Comanda | null;
+  },
+
   async getById(id: string) {
     const { data, error } = await supabase
       .from('comandas')

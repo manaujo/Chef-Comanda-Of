@@ -85,16 +85,16 @@ const Funcionarios = () => {
     }
 
     try {
-      const funcionarioData = {
-        nome_completo: formData.nome_completo,
-        email: formData.email,
-        telefone: formData.telefone.replace(/\D/g, ""),
-        cpf: formData.cpf.replace(/\D/g, ""),
-        tipo: formData.tipo,
-        ativo: formData.ativo
-      };
 
       if (editingFuncionario) {
+        const funcionarioData = {
+          nome_completo: formData.nome_completo,
+          telefone: formData.telefone.replace(/\D/g, ""),
+          cpf: formData.cpf.replace(/\D/g, ""),
+          tipo: formData.tipo,
+          ativo: formData.ativo
+        };
+        
         await profilesService.update(editingFuncionario.id, funcionarioData);
         toast({
           title: "Funcionário atualizado",
@@ -142,9 +142,22 @@ const Funcionarios = () => {
       loadFuncionarios();
     } catch (error: any) {
       console.error("Erro ao salvar funcionário:", error);
+      
+      let errorMessage = "Erro ao salvar funcionário.";
+      
+      if (error.message?.includes("User already registered")) {
+        errorMessage = "Este email já está cadastrado.";
+      } else if (error.message?.includes("Invalid email")) {
+        errorMessage = "Email inválido.";
+      } else if (error.message?.includes("Password should be at least 6 characters")) {
+        errorMessage = "A senha deve ter pelo menos 6 caracteres.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Erro",
-        description: error.message || "Erro ao salvar funcionário.",
+        description: errorMessage,
         variant: "destructive"
       });
     }
@@ -332,8 +345,14 @@ const Funcionarios = () => {
                       onChange={(e) =>
                         setFormData({ ...formData, email: e.target.value })
                       }
+                      disabled={!!editingFuncionario}
                       required
                     />
+                    {editingFuncionario && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        O email não pode ser alterado
+                      </p>
+                    )}
                   </div>
                 </div>
 

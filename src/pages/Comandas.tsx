@@ -256,7 +256,10 @@ const Comandas = () => {
                   >
                     Cancelar
                   </Button>
-                  <Button type="submit">
+                  <Button 
+                    type="submit"
+                    disabled={user?.tipo !== 'administrador' && user?.tipo !== 'garcom'}
+                  >
                     {editingComanda ? "Atualizar" : "Criar"}
                   </Button>
                 </div>
