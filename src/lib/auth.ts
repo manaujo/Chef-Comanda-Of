@@ -86,10 +86,14 @@ export const getCurrentUser = async (): Promise<User | null> => {
         .from("profiles")
         .select("*")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
-      if (error) {
-        console.warn("⚠️ Erro ao buscar perfil:", error);
+      if (error || !profile) {
+        if (error) {
+          console.warn("⚠️ Erro ao buscar perfil:", error);
+        } else {
+          console.warn("⚠️ Perfil não encontrado para o usuário:", user.id);
+        }
         // Se não conseguir buscar o perfil, retornar dados básicos do usuário
         const fallbackUser: User = {
           id: user.id,

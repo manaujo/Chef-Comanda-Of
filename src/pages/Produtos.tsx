@@ -82,7 +82,7 @@ const Produtos = () => {
         nome: formData.nome,
         descricao: formData.descricao || undefined,
         preco: parseFloat(formData.preco),
-        categoria_id: formData.categoria_id || undefined,
+        categoria_id: formData.categoria_id === "no-category" ? undefined : formData.categoria_id || undefined,
         tempo_preparo: parseInt(formData.tempo_preparo),
         foto_url: formData.foto_url || undefined,
         ativo: true
@@ -254,7 +254,7 @@ const Produtos = () => {
                         <SelectValue placeholder="Selecione uma categoria" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Sem categoria</SelectItem>
+                        <SelectItem value="no-category">Sem categoria</SelectItem>
                         {categorias.map((categoria) => (
                           <SelectItem key={categoria.id} value={categoria.id}>
                             {categoria.nome}
