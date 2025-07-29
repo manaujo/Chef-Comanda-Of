@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Mesas from "./pages/Mesas";
+import MesaDetalhes from "./pages/MesaDetalhes";
 import Comandas from "./pages/Comandas";
 import Cozinha from "./pages/Cozinha";
 import PDV from "./pages/PDV";

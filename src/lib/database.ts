@@ -144,7 +144,6 @@ export const produtosService = {
         categoria:categorias(*)
       `)
       .eq('ativo', true)
-      .order('categoria_produto', { ascending: true })
       .order('nome');
     
     if (error) throw error;
