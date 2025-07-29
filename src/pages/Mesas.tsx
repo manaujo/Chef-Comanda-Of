@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,7 @@ import { mesasService } from "@/lib/database";
 import type { Mesa, MesaStatus } from "@/types/database";
 
 const Mesas = () => {
+  const navigate = useNavigate();
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -402,6 +404,16 @@ const Mesas = () => {
                   >
                     <Edit className="h-3 w-3 mr-1" />
                     Editar
+                  </Button>
+
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => navigate(`/mesa/${mesa.id}`)}
+                    className="flex-1"
+                  >
+                    <Coffee className="h-3 w-3 mr-1" />
+                    Abrir
                   </Button>
 
                   {mesa.qr_code && (

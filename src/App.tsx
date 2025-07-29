@@ -49,6 +49,14 @@ const App = () => (
             }
           />
           <Route
+            path="/mesa/:id"
+            element={
+              <ProtectedRoute>
+                <MesaDetalhes />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/comandas"
             element={
               <ProtectedRoute>

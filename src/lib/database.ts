@@ -14,7 +14,8 @@ import type {
   UserType,
   MesaStatus,
   ComandaStatus,
-  ItemStatus
+  ItemStatus,
+  CategoriaProduto
 } from '../types/database';
 
 // Profiles
@@ -129,6 +130,21 @@ export const produtosService = {
         categoria:categorias(*)
       `)
       .eq('ativo', true)
+      .order('nome');
+    
+    if (error) throw error;
+    return data as Produto[];
+  },
+
+  async getByCategoria() {
+    const { data, error } = await supabase
+      .from('produtos')
+      .select(`
+        *,
+        categoria:categorias(*)
+      `)
+      .eq('ativo', true)
+      .order('categoria_produto', { ascending: true })
       .order('nome');
     
     if (error) throw error;
@@ -420,6 +436,25 @@ export const comandaItensService = {
         produto:produtos(*)
       `)
       .eq('comanda_id', comandaId)
+      .order('created_at');
+    
+    if (error) throw error;
+    return data as ComandaItem[];
+  },
+
+  async getByCozinha() {
+    const { data, error } = await supabase
+      .from('comanda_itens')
+      .select(`
+        *,
+        produto:produtos(*),
+        comanda:comandas(
+          *,
+          mesa:mesas(*),
+          garcom:profiles(*)
+        )
+      `)
+      .in('status', ['enviado', 'preparando', 'pronto'])
       .order('created_at');
     
     if (error) throw error;

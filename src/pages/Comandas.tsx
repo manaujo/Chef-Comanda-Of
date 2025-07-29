@@ -79,7 +79,7 @@ const Comandas = () => {
 
     try {
       const comandaData = {
-        mesa_id: formData.mesa_id || undefined,
+        mesa_id: formData.mesa_id === "none" ? undefined : formData.mesa_id,
         observacoes: formData.observacoes || undefined,
         status: "aberta" as const,
         data_abertura: new Date().toISOString()
@@ -115,7 +115,7 @@ const Comandas = () => {
   const handleEdit = (comanda: Comanda) => {
     setEditingComanda(comanda);
     setFormData({
-      mesa_id: comanda.mesa_id || "",
+      mesa_id: comanda.mesa_id || "none",
       observacoes: comanda.observacoes || ""
     });
     setDialogOpen(true);
@@ -141,7 +141,7 @@ const Comandas = () => {
 
   const resetForm = () => {
     setFormData({
-      mesa_id: "",
+      mesa_id: "none",
       observacoes: ""
     });
     setEditingComanda(null);
@@ -224,7 +224,7 @@ const Comandas = () => {
                       <SelectValue placeholder="Selecione uma mesa" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Sem mesa</SelectItem>
+                      <SelectItem value="none">Sem mesa</SelectItem>
                       {mesas
                         .filter((m) => m.status === "livre")
                         .map((mesa) => (

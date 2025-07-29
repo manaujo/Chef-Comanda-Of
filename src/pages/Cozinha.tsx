@@ -9,35 +9,49 @@ import {
   CheckCircle,
   AlertCircle,
   Play,
-  Pause
+  Pause,
+  Coffee,
+  UtensilsCrossed
 } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { comandasService, comandaItensService } from "@/lib/database";
-import type { Comanda, ComandaItem } from "@/types/database";
+import { comandaItensService, subscribeToTable } from "@/lib/database";
+import type { ComandaItem, CategoriaProduto } from "@/types/database";
 
 const Cozinha = () => {
-  const [comandas, setComandasAbertas] = useState<Comanda[]>([]);
+  const [itens, setItens] = useState<ComandaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    loadComandasAbertas();
+    loadItensCozinha();
 
     // Atualizar a cada 30 segundos
-    const interval = setInterval(loadComandasAbertas, 30000);
-    return () => clearInterval(interval);
+    const interval = setInterval(loadItensCozinha, 30000);
+    
+    // Subscrever a mudanças em tempo real
+    const unsubscribe = subscribeToTable(
+      'comanda_itens',
+      () => {
+        loadItensCozinha();
+      }
+    );
+    
+    return () => {
+      clearInterval(interval);
+      unsubscribe();
+    };
   }, []);
 
-  const loadComandasAbertas = async () => {
+  const loadItensCozinha = async () => {
     try {
       setLoading(true);
-      const data = await comandasService.getAbertas();
-      setComandasAbertas(data);
+      const data = await comandaItensService.getByCozinha();
+      setItens(data);
     } catch (error) {
-      console.error("Erro ao carregar comandas:", error);
+      console.error("Erro ao carregar itens da cozinha:", error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar comandas.",
+        description: "Erro ao carregar itens da cozinha.",
         variant: "destructive"
       });
     } finally {
@@ -52,7 +66,7 @@ const Cozinha = () => {
         title: "Status atualizado",
         description: "Status do item atualizado com sucesso."
       });
-      loadComandasAbertas();
+      loadItensCozinha();
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
       toast({
@@ -84,18 +98,12 @@ const Cozinha = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "pendente":
+      case "enviado":
         return <AlertCircle className="h-4 w-4" />;
-      case "recebido":
-        return <CheckCircle className="h-4 w-4" />;
-      case "em_preparo":
+      case "preparando":
         return <Play className="h-4 w-4" />;
       case "pronto":
         return <CheckCircle className="h-4 w-4" />;
-      case "entregue":
-        return <CheckCircle className="h-4 w-4" />;
-      case "cancelado":
-        return <Pause className="h-4 w-4" />;
       default:
         return <Clock className="h-4 w-4" />;
     }
@@ -103,11 +111,9 @@ const Cozinha = () => {
 
   const getNextStatus = (currentStatus: string) => {
     switch (currentStatus) {
-      case "pendente":
-        return "recebido";
-      case "recebido":
-        return "em_preparo";
-      case "em_preparo":
+      case "enviado":
+        return "preparando";
+      case "preparando":
         return "pronto";
       default:
         return currentStatus;
@@ -116,11 +122,9 @@ const Cozinha = () => {
 
   const getNextStatusLabel = (currentStatus: string) => {
     switch (currentStatus) {
-      case "pendente":
-        return "Receber";
-      case "recebido":
+      case "enviado":
         return "Iniciar Preparo";
-      case "em_preparo":
+      case "preparando":
         return "Marcar Pronto";
       default:
         return "Atualizar";
@@ -128,7 +132,7 @@ const Cozinha = () => {
   };
 
   const canUpdateStatus = (status: string) => {
-    return ["pendente", "recebido", "em_preparo"].includes(status);
+    return ["enviado", "preparando"].includes(status);
   };
 
   if (loading) {
@@ -141,11 +145,44 @@ const Cozinha = () => {
     );
   }
 
-  const itensPendentes = comandas
-    .flatMap((c) => c.itens || [])
-    .filter((item) =>
-      ["pendente", "recebido", "em_preparo"].includes(item.status)
-    );
+  const itensPendentes = itens.filter((item) =>
+    ["enviado", "preparando", "pronto"].includes(item.status)
+  );
+
+  const categorias: { key: CategoriaProduto; label: string; icon: any }[] = [
+    { key: "entrada", label: "Entradas", icon: Coffee },
+    { key: "prato", label: "Pratos Principais", icon: ChefHat },
+    { key: "bebida", label: "Bebidas", icon: Coffee },
+    { key: "sobremesa", label: "Sobremesas", icon: UtensilsCrossed }
+  ];
+
+  // Agrupar itens por mesa e categoria
+  const itensPorMesa = itens.reduce((acc, item) => {
+    const mesaId = item.comanda?.mesa?.id || 'sem-mesa';
+    const mesaNumero = item.comanda?.mesa?.numero || 'Balcão';
+    
+    if (!acc[mesaId]) {
+      acc[mesaId] = {
+        mesa: item.comanda?.mesa || null,
+        mesaNumero,
+        comanda: item.comanda,
+        categorias: {}
+      };
+    }
+    
+    const categoria = item.produto?.categoria_produto || 'prato';
+    if (!acc[mesaId].categorias[categoria]) {
+      acc[mesaId].categorias[categoria] = [];
+    }
+    
+    acc[mesaId].categorias[categoria].push(item);
+    return acc;
+  }, {} as Record<string, {
+    mesa: any;
+    mesaNumero: string | number;
+    comanda: any;
+    categorias: Record<string, ComandaItem[]>;
+  }>);
 
   return (
     <DashboardLayout>
@@ -169,10 +206,10 @@ const Cozinha = () => {
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <AlertCircle className="h-4 w-4 text-red-600" />
-                <span className="text-sm font-medium">Pendentes</span>
+                <span className="text-sm font-medium">Enviados</span>
               </div>
               <div className="text-2xl font-bold">
-                {itensPendentes.filter((i) => i.status === "pendente").length}
+                {itensPendentes.filter((i) => i.status === "enviado").length}
               </div>
             </CardContent>
           </Card>
@@ -184,7 +221,7 @@ const Cozinha = () => {
                 <span className="text-sm font-medium">Em Preparo</span>
               </div>
               <div className="text-2xl font-bold">
-                {itensPendentes.filter((i) => i.status === "em_preparo").length}
+                {itensPendentes.filter((i) => i.status === "preparando").length}
               </div>
             </CardContent>
           </Card>
@@ -212,108 +249,96 @@ const Cozinha = () => {
           </Card>
         </div>
 
-        {/* Comandas com Itens */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {comandas
-            .filter(
-              (comanda) =>
-                comanda.itens &&
-                comanda.itens.some((item) =>
-                  ["pendente", "recebido", "em_preparo", "pronto"].includes(
-                    item.status
-                  )
-                )
-            )
-            .map((comanda) => (
-              <Card
-                key={comanda.id}
-                className="hover:shadow-md transition-shadow"
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">
-                      Comanda #{comanda.numero}
-                    </CardTitle>
-                    <div className="text-sm text-muted-foreground">
-                      {comanda.mesa ? `Mesa ${comanda.mesa.numero}` : "Balcão"}
-                    </div>
-                  </div>
+        {/* Itens por Mesa e Categoria */}
+        <div className="space-y-6">
+          {Object.values(itensPorMesa).map((mesaData) => (
+            <Card key={mesaData.mesa?.id || 'sem-mesa'} className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">
+                    Mesa {mesaData.mesaNumero}
+                  </CardTitle>
                   <div className="text-sm text-muted-foreground">
-                    {new Date(comanda.data_abertura).toLocaleTimeString(
-                      "pt-BR",
-                      {
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      }
-                    )}
+                    Comanda #{mesaData.comanda?.numero}
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {comanda.itens
-                    ?.filter((item) =>
-                      ["pendente", "recebido", "em_preparo", "pronto"].includes(
-                        item.status
-                      )
-                    )
-                    .map((item) => (
-                      <div
-                        key={item.id}
-                        className="border rounded-lg p-3 space-y-2"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="font-medium">
-                              {item.quantidade}x {item.produto?.nome}
-                            </div>
-                            {item.observacoes && (
-                              <div className="text-sm text-muted-foreground">
-                                Obs: {item.observacoes}
-                              </div>
-                            )}
-                          </div>
-                          <Badge variant={getStatusColor(item.status)}>
-                            {getStatusIcon(item.status)}
-                            <span className="ml-1 capitalize">
-                              {item.status.replace("_", " ")}
-                            </span>
-                          </Badge>
-                        </div>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Garçom: {mesaData.comanda?.garcom?.nome_completo}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {categorias.map((categoria) => {
+                  const itensCategoria = mesaData.categorias[categoria.key] || [];
+                  if (itensCategoria.length === 0) return null;
 
-                        {canUpdateStatus(item.status) && (
-                          <Button
-                            size="sm"
-                            onClick={() =>
-                              handleUpdateItemStatus(
-                                item.id,
-                                getNextStatus(item.status)
-                              )
-                            }
-                            className="w-full"
-                            variant={
-                              item.status === "pendente"
-                                ? "destructive"
-                                : "default"
-                            }
+                  return (
+                    <div key={categoria.key} className="border rounded-lg p-4">
+                      <h4 className="font-semibold mb-3 flex items-center space-x-2">
+                        <categoria.icon className="h-4 w-4" />
+                        <span>{categoria.label}</span>
+                      </h4>
+                      <div className="space-y-2">
+                        {itensCategoria.map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex items-center justify-between p-3 bg-muted rounded-lg"
                           >
-                            {getNextStatusLabel(item.status)}
-                          </Button>
-                        )}
+                            <div className="flex-1">
+                              <div className="font-medium">
+                                {item.quantidade}x {item.produto?.nome}
+                              </div>
+                              {item.observacoes && (
+                                <div className="text-sm text-muted-foreground">
+                                  Obs: {item.observacoes}
+                                </div>
+                              )}
+                              <div className="text-xs text-muted-foreground">
+                                {new Date(item.created_at).toLocaleTimeString("pt-BR", {
+                                  hour: "2-digit",
+                                  minute: "2-digit"
+                                })}
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Badge variant={getStatusColor(item.status)}>
+                                {getStatusIcon(item.status)}
+                                <span className="ml-1 capitalize">
+                                  {item.status === "enviado" && "Enviado"}
+                                  {item.status === "preparando" && "Preparando"}
+                                  {item.status === "pronto" && "Pronto"}
+                                </span>
+                              </Badge>
+                              {canUpdateStatus(item.status) && (
+                                <Button
+                                  size="sm"
+                                  onClick={() =>
+                                    handleUpdateItemStatus(
+                                      item.id,
+                                      getNextStatus(item.status)
+                                    )
+                                  }
+                                  variant={
+                                    item.status === "enviado"
+                                      ? "destructive"
+                                      : "default"
+                                  }
+                                >
+                                  {getNextStatusLabel(item.status)}
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                </CardContent>
-              </Card>
-            ))}
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        {comandas.filter(
-          (comanda) =>
-            comanda.itens &&
-            comanda.itens.some((item) =>
-              ["pendente", "recebido", "em_preparo", "pronto"].includes(
-                item.status
-              )
-            )
-        ).length === 0 && (
+        {Object.keys(itensPorMesa).length === 0 && (
           <Card>
             <CardContent className="text-center py-12">
               <ChefHat className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

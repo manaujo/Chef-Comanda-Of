@@ -1,11 +1,12 @@
 export type UserType = 'administrador' | 'garcom' | 'caixa' | 'estoque' | 'cozinha';
-export type MesaStatus = 'livre' | 'ocupada' | 'reservada' | 'manutencao';
-export type ComandaStatus = 'aberta' | 'fechada' | 'cancelada';
-export type ItemStatus = 'pendente' | 'recebido' | 'em_preparo' | 'pronto' | 'entregue' | 'cancelado';
+export type MesaStatus = 'livre' | 'ocupada' | 'reservada' | 'manutencao' | 'aguardando_pagamento';
+export type ComandaStatus = 'aberta' | 'fechada' | 'cancelada' | 'em_preparo' | 'pronta';
+export type ItemStatus = 'pendente' | 'recebido' | 'em_preparo' | 'pronto' | 'entregue' | 'cancelado' | 'enviado' | 'preparando';
 export type AssinaturaStatus = 'ativa' | 'vencida' | 'cancelada' | 'suspensa';
 export type AssinaturaTipo = 'mensal' | 'anual';
 export type UnidadeMedida = 'kg' | 'g' | 'l' | 'ml' | 'un' | 'cx' | 'pct';
 export type TipoAcao = 'criacao' | 'edicao' | 'exclusao' | 'cancelamento' | 'login' | 'logout';
+export type CategoriaProduto = 'prato' | 'entrada' | 'bebida' | 'sobremesa';
 
 export interface Profile {
   id: string;
@@ -55,6 +56,8 @@ export interface Produto {
   preco: number;
   categoria_id?: string;
   categoria?: Categoria;
+  categoria_produto: CategoriaProduto;
+  foto?: string;
   foto_url?: string;
   ativo: boolean;
   tempo_preparo: number;

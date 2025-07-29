@@ -94,13 +94,13 @@ export const getCurrentUser = async (): Promise<User | null> => {
         } else {
           console.warn("⚠️ Perfil não encontrado para o usuário:", user.id);
         }
-        // Se não conseguir buscar o perfil, retornar dados básicos do usuário
+        
+        // Retornar dados básicos do usuário autenticado se perfil não encontrado
         const fallbackUser: User = {
           id: user.id,
           email: user.email || "",
           nome_completo: user.user_metadata?.nome_completo || "Usuário",
-          nome_restaurante:
-            user.user_metadata?.nome_restaurante || "Restaurante",
+          nome_restaurante: user.user_metadata?.nome_restaurante || "Restaurante",
           cpf: user.user_metadata?.cpf || "",
           telefone: user.user_metadata?.telefone || "",
           created_at: user.created_at || new Date().toISOString()

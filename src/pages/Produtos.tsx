@@ -397,6 +397,12 @@ const Produtos = () => {
                     {produto.categoria.nome}
                   </Badge>
                 )}
+                <Badge variant="outline" className="w-fit">
+                  {produto.categoria_produto === "entrada" && "Entrada"}
+                  {produto.categoria_produto === "prato" && "Prato Principal"}
+                  {produto.categoria_produto === "bebida" && "Bebida"}
+                  {produto.categoria_produto === "sobremesa" && "Sobremesa"}
+                </Badge>
               </CardHeader>
               <CardContent className="space-y-3">
                 {produto.descricao && (
