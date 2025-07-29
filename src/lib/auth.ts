@@ -17,6 +17,7 @@ export const signUp = async (userData: {
   nome_restaurante: string;
   cpf: string;
   telefone: string;
+  tipo?: UserType;
 }) => {
   const { data, error } = await supabase.auth.signUp({
     email: userData.email,
@@ -26,7 +27,8 @@ export const signUp = async (userData: {
         nome_completo: userData.nome_completo,
         nome_restaurante: userData.nome_restaurante,
         cpf: userData.cpf,
-        telefone: userData.telefone
+        telefone: userData.telefone,
+        tipo: userData.tipo || 'garcom'
       }
     }
   });
@@ -42,7 +44,8 @@ export const signUp = async (userData: {
         nome_completo: userData.nome_completo,
         nome_restaurante: userData.nome_restaurante,
         cpf: userData.cpf,
-        telefone: userData.telefone
+        telefone: userData.telefone,
+        tipo: userData.tipo || 'garcom'
       }
     ]);
 

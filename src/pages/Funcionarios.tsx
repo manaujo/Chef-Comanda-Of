@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Users, UserCheck, UserX, Mail, Phone } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { profilesService } from "@/lib/database";
+import { signUp } from "@/lib/auth";
 import { useAuth } from "@/hooks/useAuth";
 import type { Profile, UserType } from "@/types/database";
 
@@ -41,7 +42,9 @@ const Funcionarios = () => {
     telefone: "",
     cpf: "",
     tipo: "garcom" as UserType,
-    ativo: true
+    ativo: true,
+    password: "",
+    confirmPassword: ""
   });
 
   // Check if user is admin
@@ -71,6 +74,16 @@ const Funcionarios = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Check if user has admin privileges before proceeding
+    if (!isAdmin) {
+      toast({
+        title: "Acesso negado",
+        description: "Apenas administradores podem criar ou editar funcionários.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       const funcionarioData = {
         nome_completo: formData.nome_completo,
@@ -88,7 +101,36 @@ const Funcionarios = () => {
           description: "Funcionário atualizado com sucesso."
         });
       } else {
-        await profilesService.create(funcionarioData);
+        // Validate password for new employees
+        if (!formData.password || formData.password.length < 6) {
+          toast({
+            title: "Erro",
+            description: "A senha deve ter pelo menos 6 caracteres.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+          toast({
+            title: "Erro",
+            description: "As senhas não coincidem.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        // Create new user with Supabase Auth
+        await signUp({
+          email: formData.email,
+          password: formData.password,
+          nome_completo: formData.nome_completo,
+          nome_restaurante: user?.nome_restaurante || "Restaurante",
+          cpf: formData.cpf.replace(/\D/g, ""),
+          telefone: formData.telefone.replace(/\D/g, ""),
+          tipo: formData.tipo
+        });
+        
         toast({
           title: "Funcionário criado",
           description: "Funcionário criado com sucesso."
@@ -122,6 +164,16 @@ const Funcionarios = () => {
   };
 
   const handleToggleStatus = async (funcionario: Profile) => {
+    // Check if user has admin privileges before proceeding
+    if (!isAdmin) {
+      toast({
+        title: "Acesso negado",
+        description: "Apenas administradores podem alterar o status de funcionários.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       await profilesService.update(funcionario.id, {
         ativo: !funcionario.ativo
@@ -150,7 +202,9 @@ const Funcionarios = () => {
       telefone: "",
       cpf: "",
       tipo: "garcom",
-      ativo: true
+      ativo: true,
+      password: "",
+      confirmPassword: ""
     });
     setEditingFuncionario(null);
   };
@@ -315,6 +369,37 @@ const Funcionarios = () => {
                     />
                   </div>
                 </div>
+
+                {!editingFuncionario && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="password">Senha *</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={formData.password}
+                        onChange={(e) =>
+                          setFormData({ ...formData, password: e.target.value })
+                        }
+                        required={!editingFuncionario}
+                        minLength={6}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        value={formData.confirmPassword}
+                        onChange={(e) =>
+                          setFormData({ ...formData, confirmPassword: e.target.value })
+                        }
+                        required={!editingFuncionario}
+                        minLength={6}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
