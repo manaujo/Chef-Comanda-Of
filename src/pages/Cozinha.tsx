@@ -9,7 +9,6 @@ import {
   CheckCircle,
   AlertCircle,
   Play,
-  Pause,
   Coffee,
   UtensilsCrossed
 } from "lucide-react";
@@ -140,7 +139,7 @@ const Cozinha = () => {
   }
 
   const itensPendentes = itens.filter((item) =>
-    ["enviado", "preparando", "pronto"].includes(item.status)
+    ["aguardando", "preparando", "pronto"].includes(item.status)
   );
 
   const categorias: { key: CategoriaProduto; label: string; icon: any }[] = [
@@ -256,9 +255,6 @@ const Cozinha = () => {
                     Comanda #{mesaData.comanda?.numero}
                   </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  Garçom: {mesaData.comanda?.garcom?.nome_completo}
-                </div>
                 {mesaData.comanda?.garcom_funcionario && (
                   <div className="text-sm text-muted-foreground">
                     Garçom: {mesaData.comanda.garcom_funcionario.nome}
@@ -302,8 +298,8 @@ const Cozinha = () => {
                               <Badge variant={getStatusColor(item.status)}>
                                 {getStatusIcon(item.status)}
                                 <span className="ml-1 capitalize">
-                                  {item.status === "enviado" && "Enviado"}
-                                {item.status === "aguardando" && "Aguardando"}
+                                  {item.status === "aguardando" && "Aguardando"}
+                                  {item.status === "preparando" && "Preparando"}
                                   {item.status === "pronto" && "Pronto"}
                                 </span>
                               </Badge>
@@ -316,11 +312,7 @@ const Cozinha = () => {
                                       getNextStatus(item.status)
                                     )
                                   }
-                                  variant={
-                                    item.status === "enviado"
-                                  item.status === "aguardando"
-                                      : "default"
-                                  }
+                                  variant={item.status === "aguardando" ? "destructive" : "default"}
                                 >
                                   {getNextStatusLabel(item.status)}
                                 </Button>

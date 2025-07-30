@@ -20,23 +20,13 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   ShoppingCart,
-  Plus,
-  Minus,
-  Trash2,
   DollarSign,
   User,
   CreditCard
 } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { funcionariosSimplesService, type FuncionarioSimples } from "@/lib/funcionarios-simples";
-import { produtosService, comandasService, vendasService, mesasService, pdvService } from "@/lib/database";
-import type { Produto, Mesa } from "@/types/database";
-
-interface ItemVenda {
-  produto: Produto;
-  quantidade: number;
-  observacoes?: string;
-}
+import { comandasService, vendasService, mesasService, pdvService } from "@/lib/database";
 
 const PDV = () => {
   const [operadorSelecionado, setOperadorSelecionado] = useState<FuncionarioSimples | null>(null);

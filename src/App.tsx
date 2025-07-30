@@ -8,7 +8,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Mesas from "./pages/Mesas";
-import MesaDetalhes from "./pages/MesaDetalhes";
+import ComandaDetalhes from "./pages/ComandaDetalhes";
 import Comandas from "./pages/Comandas";
 import Cozinha from "./pages/Cozinha";
 import PDV from "./pages/PDV";
@@ -59,10 +59,10 @@ const App = () => (
             }
           />
           <Route
-            path="/mesa/:id"
+            path="/comanda/:id"
             element={
-              <ProtectedRoute allowedRoles={["administrador", "garcom"]}>
-                <MesaDetalhes />
+              <ProtectedRoute>
+                <ComandaDetalhes />
               </ProtectedRoute>
             }
           />

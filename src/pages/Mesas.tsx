@@ -8,8 +8,6 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -21,37 +19,29 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Users,
   Coffee,
-  Plus,
-  Minus,
   User,
   CheckCircle,
   Clock,
   UtensilsCrossed
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { funcionariosSimplesService, type FuncionarioSimples } from "@/lib/funcionarios-simples";
 import { 
   mesasService, 
-  comandasService, 
-  comandaItensService, 
-  produtosService,
+  comandasService,
   subscribeToTable 
 } from "@/lib/database";
-import type { Mesa, Comanda, Produto, ComandaItem } from "@/types/database";
+import type { Mesa, Comanda } from "@/types/database";
 
 const Mesas = () => {
+  const navigate = useNavigate();
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [funcionariosGarcom, setFuncionariosGarcom] = useState<FuncionarioSimples[]>([]);
-  const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogGarcomOpen, setDialogGarcomOpen] = useState(false);
-  const [dialogMesaOpen, setDialogMesaOpen] = useState(false);
-  const [dialogProdutoOpen, setDialogProdutoOpen] = useState(false);
   const [mesaSelecionada, setMesaSelecionada] = useState<Mesa | null>(null);
-  const [comandaAtual, setComandaAtual] = useState<Comanda | null>(null);
-  const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
-  const [quantidade, setQuantidade] = useState(1);
-  const [observacoes, setObservacoes] = useState("");
+  const [garcomSelecionado, setGarcomSelecionado] = useState<string>("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -65,28 +55,24 @@ const Mesas = () => {
     });
 
     const unsubscribeComandasItens = subscribeToTable("comanda_itens", () => {
-      if (comandaAtual) {
-        loadComandaDetalhes(comandaAtual.id);
-      }
+      loadMesas();
     });
 
     return () => {
       unsubscribeMesas();
       unsubscribeComandasItens();
     };
-  }, [comandaAtual]);
+  }, []);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [mesasData, funcionariosData, produtosData] = await Promise.all([
+      const [mesasData, funcionariosData] = await Promise.all([
         mesasService.getAll(),
-        funcionariosSimplesService.getByTipo('garcom'),
-        produtosService.getAll()
+        funcionariosSimplesService.getByTipo('garcom')
       ]);
       setMesas(mesasData);
       setFuncionariosGarcom(funcionariosData);
-      setProdutos(produtosData);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
       toast({
@@ -108,27 +94,18 @@ const Mesas = () => {
     }
   };
 
-  const loadComandaDetalhes = async (comandaId: string) => {
-    try {
-      const comandaData = await comandasService.getById(comandaId);
-      setComandaAtual(comandaData);
-    } catch (error) {
-      console.error("Erro ao carregar detalhes da comanda:", error);
-    }
-  };
-
   const handleClickMesa = async (mesa: Mesa) => {
     setMesaSelecionada(mesa);
     
     if (mesa.status === "livre") {
+      // Mesa livre - selecionar garçom para criar comanda
       setDialogGarcomOpen(true);
     } else if (mesa.status === "ocupada" || mesa.status === "fechada") {
-      // Mesa ocupada - carregar comanda
+      // Mesa ocupada - redirecionar para comanda
       try {
         const comanda = await comandasService.getByMesa(mesa.id);
         if (comanda) {
-          setComandaAtual(comanda);
-          setDialogMesaOpen(true);
+          navigate(`/comanda/${comanda.id}`);
         } else {
           // Se não há comanda ativa, liberar a mesa
           await mesasService.updateStatus(mesa.id, "livre");
@@ -145,14 +122,14 @@ const Mesas = () => {
     }
   };
 
-  const handleSelecionarGarcom = async (garcomId: string) => {
-    if (!mesaSelecionada) return;
+  const handleSelecionarGarcom = async () => {
+    if (!mesaSelecionada || !garcomSelecionado) return;
 
     try {
       // Criar nova comanda
       const comanda = await comandasService.create({
         mesa_id: mesaSelecionada.id,
-        garcom_funcionario_id: garcomId,
+        garcom_funcionario_id: garcomSelecionado,
         status: "aberta",
         data_abertura: new Date().toISOString()
       });
@@ -166,93 +143,17 @@ const Mesas = () => {
       });
 
       setDialogGarcomOpen(false);
-      setComandaAtual(comanda);
-      setDialogMesaOpen(true);
+      setGarcomSelecionado("");
+      
+      // Redirecionar para a comanda
+      navigate(`/comanda/${comanda.id}`);
+      
       loadMesas();
     } catch (error: any) {
       console.error("Erro ao atribuir garçom:", error);
       toast({
         title: "Erro",
         description: error.message || "Erro ao atribuir garçom à mesa.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleAdicionarProduto = (produto: Produto) => {
-    setProdutoSelecionado(produto);
-    setQuantidade(1);
-    setObservacoes("");
-    setDialogProdutoOpen(true);
-  };
-
-  const handleConfirmarProduto = async () => {
-    if (!comandaAtual || !produtoSelecionado) return;
-
-    try {
-      await comandaItensService.create({
-        comanda_id: comandaAtual.id,
-        produto_id: produtoSelecionado.id,
-        quantidade,
-        preco_unitario: produtoSelecionado.preco,
-        status: "pendente",
-        enviado_cozinha: false,
-        observacoes: observacoes || undefined
-      });
-
-      toast({
-        title: "Produto adicionado",
-        description: `${produtoSelecionado.nome} adicionado à comanda.`
-      });
-
-      setDialogProdutoOpen(false);
-      setProdutoSelecionado(null);
-      setQuantidade(1);
-      setObservacoes("");
-      
-      // Recarregar comanda
-      loadComandaDetalhes(comandaAtual.id);
-    } catch (error: any) {
-      console.error("Erro ao adicionar produto:", error);
-      toast({
-        title: "Erro",
-        description: error.message || "Erro ao adicionar produto.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleFecharComanda = async () => {
-    if (!comandaAtual || !mesaSelecionada) return;
-
-    try {
-      // Verificar se todos os itens foram enviados para cozinha
-      const itensNaoEnviados = comandaAtual.itens?.filter(item => !item.enviado_cozinha && item.status !== 'cancelado') || [];
-      
-      if (itensNaoEnviados.length > 0) {
-        toast({
-          title: "Atenção",
-          description: "Há itens que ainda não foram enviados para a cozinha. Envie todos os itens antes de fechar a comanda.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Se todos os itens foram enviados, a comanda será fechada automaticamente quando todos estiverem prontos
-      toast({
-        title: "Comanda em produção",
-        description: "Todos os itens foram enviados para a cozinha. A comanda será liberada para pagamento quando todos os itens estiverem prontos."
-      });
-
-      setDialogMesaOpen(false);
-      setComandaAtual(null);
-      setMesaSelecionada(null);
-      loadMesas();
-    } catch (error: any) {
-      console.error("Erro ao fechar comanda:", error);
-      toast({
-        title: "Erro",
-        description: error.message || "Erro ao processar comanda.",
         variant: "destructive"
       });
     }
@@ -288,6 +189,21 @@ const Mesas = () => {
     }
   };
 
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "livre":
+        return "Livre";
+      case "ocupada":
+        return "Ocupada";
+      case "fechada":
+        return "Pronta";
+      case "aguardando_pagamento":
+        return "Aguardando";
+      default:
+        return status;
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -309,7 +225,7 @@ const Mesas = () => {
               <span>Controle de Mesas</span>
             </h1>
             <p className="text-sm sm:text-base lg:text-lg text-muted-foreground mt-1">
-              Gerencie as mesas e comandas do restaurante
+              Clique em uma mesa livre para atribuir garçom ou em uma ocupada para ver a comanda
             </p>
           </div>
         </div>
@@ -343,11 +259,11 @@ const Mesas = () => {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
-                <UtensilsCrossed className="h-4 w-4 text-yellow-600" />
-                <span className="text-sm font-medium">Aguardando Pagamento</span>
+                <UtensilsCrossed className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium">Prontas</span>
               </div>
               <div className="text-2xl font-bold">
-                {mesas.filter(m => m.status === "aguardando_pagamento").length}
+                {mesas.filter(m => m.status === "fechada").length}
               </div>
             </CardContent>
           </Card>
@@ -355,7 +271,7 @@ const Mesas = () => {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
-                <Users className="h-4 w-4 text-blue-600" />
+                <Users className="h-4 w-4 text-purple-600" />
                 <span className="text-sm font-medium">Total Mesas</span>
               </div>
               <div className="text-2xl font-bold">{mesas.length}</div>
@@ -376,10 +292,7 @@ const Mesas = () => {
                   {getStatusIcon(mesa.status)}
                   <div className="font-bold text-lg">Mesa {mesa.numero}</div>
                   <Badge variant="outline" className="text-xs">
-                    {mesa.status === "livre" && "Livre"}
-                    {mesa.status === "ocupada" && "Ocupada"}
-                    {mesa.status === "fechada" && "Pronta"}
-                    {mesa.status === "aguardando_pagamento" && "Aguardando"}
+                    {getStatusLabel(mesa.status)}
                   </Badge>
                   <div className="text-xs text-muted-foreground">
                     {mesa.capacidade} pessoas
@@ -394,283 +307,49 @@ const Mesas = () => {
         <Dialog open={dialogGarcomOpen} onOpenChange={setDialogGarcomOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Selecione o Garçom para essa mesa</DialogTitle>
+              <DialogTitle>Selecione o Garçom para Mesa {mesaSelecionada?.numero}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Mesa {mesaSelecionada?.numero} - Selecione o garçom responsável:
+                Selecione o garçom responsável por esta mesa:
               </p>
               
-              {funcionariosGarcom.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">
-                    Nenhum garçom ativo encontrado.
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Cadastre garçons na tela de Gerenciar Funcionários.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid gap-2">
-                  {funcionariosGarcom.map((garcom) => (
-                    <Button
-                      key={garcom.id}
-                      variant="outline"
-                      className="justify-start h-auto p-4"
-                      onClick={() => handleSelecionarGarcom(garcom.id)}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                          <User className="h-5 w-5 text-primary" />
-                        </div>
-                        <div className="text-left">
-                          <div className="font-medium">{garcom.nome}</div>
-                          <div className="text-sm text-muted-foreground">
-                            Garçom
-                          </div>
-                        </div>
-                      </div>
-                    </Button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Dialog Mesa Ocupada */}
-        <Dialog open={dialogMesaOpen} onOpenChange={setDialogMesaOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>
-                Mesa {mesaSelecionada?.numero} - Comanda #{comandaAtual?.numero}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              {comandaAtual?.garcom_funcionario && (
-                <div className="flex items-center space-x-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    Garçom: <strong>{comandaAtual.garcom_funcionario.nome}</strong>
-                  </span>
-                </div>
-              )}
-
-              {/* Itens da Comanda */}
               <div>
-                <h4 className="font-semibold mb-3">Itens da Comanda</h4>
-                {comandaAtual?.itens && comandaAtual.itens.length > 0 ? (
-                  <div className="space-y-2">
-                    {comandaAtual.itens.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                      >
-                        <div className="flex-1">
-                          <div className="font-medium">
-                            {item.quantidade}x {item.produto?.nome}
-                          </div>
-                          {item.observacoes && (
-                            <div className="text-sm text-muted-foreground">
-                              Obs: {item.observacoes}
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <div className="font-medium">
-                            R$ {(item.quantidade * item.preco_unitario).toFixed(2)}
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Badge variant="outline" className="text-xs">
-                              {item.status === "pendente" && "Pendente"}
-                              {item.status === "aguardando" && "Aguardando"}
-                              {item.status === "preparando" && "Preparando"}
-                              {item.status === "pronto" && "Pronto"}
-                            </Badge>
-                            {!item.enviado_cozinha && item.status === "pendente" && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={async () => {
-                                  try {
-                                    await comandaItensService.enviarParaCozinha(item.id);
-                                    toast({
-                                      title: "Item enviado",
-                                      description: "Item enviado para a cozinha."
-                                    });
-                                    loadComandaDetalhes(comandaAtual.id);
-                                  } catch (error) {
-                                    toast({
-                                      title: "Erro",
-                                      description: "Erro ao enviar item para cozinha.",
-                                      variant: "destructive"
-                                    });
-                                  }
-                                }}
-                              >
-                                Enviar p/ Cozinha
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                <Select value={garcomSelecionado} onValueChange={setGarcomSelecionado}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um garçom" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {funcionariosGarcom.map((garcom) => (
+                      <SelectItem key={garcom.id} value={garcom.id}>
+                        {garcom.nome}
+                      </SelectItem>
                     ))}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-center py-4">
-                    Nenhum item na comanda
+                  </SelectContent>
+                </Select>
+                {funcionariosGarcom.length === 0 && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Nenhum garçom ativo encontrado. Cadastre garçons na tela de Gerenciar Funcionários.
                   </p>
                 )}
               </div>
 
-              {/* Total */}
-              <div className="border-t pt-4">
-                <div className="flex justify-between text-lg font-bold">
-                  <span>Total:</span>
-                  <span>R$ {comandaAtual?.valor_total.toFixed(2) || "0.00"}</span>
-                </div>
-              </div>
-
-              {/* Produtos para Adicionar */}
-              <div>
-                <h4 className="font-semibold mb-3">Adicionar Produtos</h4>
-                <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-                  {produtos.slice(0, 8).map((produto) => (
-                    <Button
-                      key={produto.id}
-                      variant="outline"
-                      className="h-auto p-3 text-left"
-                      onClick={() => handleAdicionarProduto(produto)}
-                    >
-                      <div className="w-full">
-                        <div className="font-medium text-sm">{produto.nome}</div>
-                        <div className="text-xs text-muted-foreground">
-                          R$ {produto.preco.toFixed(2)}
-                        </div>
-                      </div>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Ações */}
               <div className="flex justify-end space-x-2">
                 <Button
                   variant="outline"
-                  onClick={() => setDialogMesaOpen(false)}
+                  onClick={() => setDialogGarcomOpen(false)}
                 >
-                  Fechar
+                  Cancelar
                 </Button>
-                {comandaAtual?.status === "pronto_para_fechamento" ? (
-                  <Button
-                    variant="default"
-                    onClick={() => {
-                      setDialogMesaOpen(false);
-                      // Redirecionar para PDV ou mostrar que está pronta para pagamento
-                      toast({
-                        title: "Comanda pronta",
-                        description: "Esta comanda está pronta para pagamento no PDV."
-                      });
-                    }}
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Pronta para Pagamento
-                  </Button>
-                ) : (
-                  <Button
-                    variant="destructive"
-                    onClick={handleFecharComanda}
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Enviar para Produção
-                  </Button>
-                )}
+                <Button
+                  onClick={handleSelecionarGarcom}
+                  disabled={!garcomSelecionado}
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  Confirmar Garçom
+                </Button>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Dialog Adicionar Produto */}
-        <Dialog open={dialogProdutoOpen} onOpenChange={setDialogProdutoOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Adicionar Produto</DialogTitle>
-            </DialogHeader>
-            {produtoSelecionado && (
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-semibold">{produtoSelecionado.nome}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {produtoSelecionado.descricao}
-                  </p>
-                  <p className="text-lg font-bold text-primary">
-                    R$ {produtoSelecionado.preco.toFixed(2)}
-                  </p>
-                </div>
-
-                <div>
-                  <Label htmlFor="quantidade">Quantidade</Label>
-                  <div className="flex items-center space-x-3 mt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setQuantidade(Math.max(1, quantidade - 1))}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <Input
-                      id="quantidade"
-                      type="number"
-                      min="1"
-                      value={quantidade}
-                      onChange={(e) => setQuantidade(parseInt(e.target.value) || 1)}
-                      className="w-20 text-center"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setQuantidade(quantidade + 1)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="observacoes">Observações</Label>
-                  <Input
-                    id="observacoes"
-                    value={observacoes}
-                    onChange={(e) => setObservacoes(e.target.value)}
-                    placeholder="Observações especiais..."
-                  />
-                </div>
-
-                <div className="bg-muted p-4 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <span>Total do item:</span>
-                    <span className="text-lg font-bold">
-                      R$ {(produtoSelecionado.preco * quantidade).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex justify-end space-x-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setDialogProdutoOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleConfirmarProduto}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Adicionar
-                  </Button>
-                </div>
-              </div>
-            )}
           </DialogContent>
         </Dialog>
       </div>
