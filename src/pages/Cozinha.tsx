@@ -79,18 +79,12 @@ const Cozinha = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "pendente":
+      case "aguardando":
         return "destructive";
-      case "recebido":
-        return "secondary";
-      case "em_preparo":
+      case "preparando":
         return "default";
       case "pronto":
-        return "outline";
-      case "entregue":
         return "secondary";
-      case "cancelado":
-        return "destructive";
       default:
         return "outline";
     }
@@ -98,7 +92,7 @@ const Cozinha = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "enviado":
+      case "aguardando":
         return <AlertCircle className="h-4 w-4" />;
       case "preparando":
         return <Play className="h-4 w-4" />;
@@ -111,7 +105,7 @@ const Cozinha = () => {
 
   const getNextStatus = (currentStatus: string) => {
     switch (currentStatus) {
-      case "enviado":
+      case "aguardando":
         return "preparando";
       case "preparando":
         return "pronto";
@@ -122,7 +116,7 @@ const Cozinha = () => {
 
   const getNextStatusLabel = (currentStatus: string) => {
     switch (currentStatus) {
-      case "enviado":
+      case "aguardando":
         return "Iniciar Preparo";
       case "preparando":
         return "Marcar Pronto";
@@ -132,7 +126,7 @@ const Cozinha = () => {
   };
 
   const canUpdateStatus = (status: string) => {
-    return ["enviado", "preparando"].includes(status);
+    return ["aguardando", "preparando"].includes(status);
   };
 
   if (loading) {
@@ -205,11 +199,11 @@ const Cozinha = () => {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
-                <AlertCircle className="h-4 w-4 text-red-600" />
-                <span className="text-sm font-medium">Enviados</span>
+                <Clock className="h-4 w-4 text-red-600" />
+                <span className="text-sm font-medium">Aguardando</span>
               </div>
               <div className="text-2xl font-bold">
-                {itensPendentes.filter((i) => i.status === "enviado").length}
+                {itensPendentes.filter((i) => i.status === "aguardando").length}
               </div>
             </CardContent>
           </Card>
@@ -309,7 +303,7 @@ const Cozinha = () => {
                                 {getStatusIcon(item.status)}
                                 <span className="ml-1 capitalize">
                                   {item.status === "enviado" && "Enviado"}
-                                  {item.status === "preparando" && "Preparando"}
+                                {item.status === "aguardando" && "Aguardando"}
                                   {item.status === "pronto" && "Pronto"}
                                 </span>
                               </Badge>
@@ -324,7 +318,7 @@ const Cozinha = () => {
                                   }
                                   variant={
                                     item.status === "enviado"
-                                      ? "destructive"
+                                  item.status === "aguardando"
                                       : "default"
                                   }
                                 >

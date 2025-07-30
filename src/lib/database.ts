@@ -1,7 +1,6 @@
 import { supabase } from './supabase';
 import { funcionariosService } from './funcionarios';
 import { funcionariosSimplesService } from './funcionarios-simples';
-import { comandaItensService } from './database';
 import type { 
   Profile, 
   Mesa, 
@@ -331,10 +330,10 @@ export const comandasService = {
         )
       `)
       .eq('mesa_id', mesaId)
-      .eq('status', 'aberta')
-      .single();
+      .in('status', ['aberta', 'em_preparo', 'pronto_para_fechamento'])
+      .maybeSingle();
     
-    if (error && error.code !== 'PGRST116') throw error;
+    if (error) throw error;
     return data as Comanda | null;
   },
 
@@ -482,14 +481,57 @@ export const comandaItensService = {
         comanda:comandas(
           *,
           mesa:mesas(*),
-          garcom:profiles(*)
+          garcom:profiles(*),
+          garcom_funcionario:funcionarios_simples(*)
         )
       `)
-      .in('status', ['enviado', 'preparando', 'pronto'])
+      .eq('enviado_cozinha', true)
+      .in('status', ['aguardando', 'preparando', 'pronto'])
       .order('created_at');
     
     if (error) throw error;
     return data as ComandaItem[];
+  },
+
+  async enviarParaCozinha(id: string) {
+    const { data, error } = await supabase
+      .from('comanda_itens')
+      .update({ 
+        enviado_cozinha: true,
+        status: 'aguardando'
+      })
+      .eq('id', id)
+      .select(`
+        *,
+        produto:produtos(*)
+      `)
+      .single();
+    
+    if (error) throw error;
+    return data as ComandaItem;
+  }
+};
+
+// Comandas prontas para fechamento (PDV)
+export const pdvService = {
+  async getComandasProntasParaFechamento() {
+    const { data, error } = await supabase
+      .from('comandas')
+      .select(`
+        *,
+        mesa:mesas(*),
+        garcom:profiles(*),
+        garcom_funcionario:funcionarios_simples(*),
+        itens:comanda_itens(
+          *,
+          produto:produtos(*)
+        )
+      `)
+      .eq('status', 'pronto_para_fechamento')
+      .order('created_at');
+    
+    if (error) throw error;
+    return data as Comanda[];
   }
 };
 

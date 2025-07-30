@@ -122,13 +122,17 @@ const Mesas = () => {
     
     if (mesa.status === "livre") {
       setDialogGarcomOpen(true);
-    } else {
+    } else if (mesa.status === "ocupada" || mesa.status === "fechada") {
       // Mesa ocupada - carregar comanda
       try {
         const comanda = await comandasService.getByMesa(mesa.id);
         if (comanda) {
           setComandaAtual(comanda);
           setDialogMesaOpen(true);
+        } else {
+          // Se não há comanda ativa, liberar a mesa
+          await mesasService.updateStatus(mesa.id, "livre");
+          loadMesas();
         }
       } catch (error) {
         console.error("Erro ao carregar comanda da mesa:", error);
@@ -191,7 +195,8 @@ const Mesas = () => {
         produto_id: produtoSelecionado.id,
         quantidade,
         preco_unitario: produtoSelecionado.preco,
-        status: "enviado",
+        status: "pendente",
+        enviado_cozinha: false,
         observacoes: observacoes || undefined
       });
 
@@ -221,12 +226,22 @@ const Mesas = () => {
     if (!comandaAtual || !mesaSelecionada) return;
 
     try {
-      await comandasService.fechar(comandaAtual.id);
-      await mesasService.updateStatus(mesaSelecionada.id, "livre");
+      // Verificar se todos os itens foram enviados para cozinha
+      const itensNaoEnviados = comandaAtual.itens?.filter(item => !item.enviado_cozinha && item.status !== 'cancelado') || [];
+      
+      if (itensNaoEnviados.length > 0) {
+        toast({
+          title: "Atenção",
+          description: "Há itens que ainda não foram enviados para a cozinha. Envie todos os itens antes de fechar a comanda.",
+          variant: "destructive"
+        });
+        return;
+      }
 
+      // Se todos os itens foram enviados, a comanda será fechada automaticamente quando todos estiverem prontos
       toast({
-        title: "Comanda fechada",
-        description: "Comanda fechada e mesa liberada."
+        title: "Comanda em produção",
+        description: "Todos os itens foram enviados para a cozinha. A comanda será liberada para pagamento quando todos os itens estiverem prontos."
       });
 
       setDialogMesaOpen(false);
@@ -237,7 +252,7 @@ const Mesas = () => {
       console.error("Erro ao fechar comanda:", error);
       toast({
         title: "Erro",
-        description: error.message || "Erro ao fechar comanda.",
+        description: error.message || "Erro ao processar comanda.",
         variant: "destructive"
       });
     }
@@ -249,6 +264,8 @@ const Mesas = () => {
         return "bg-green-100 border-green-300 text-green-800";
       case "ocupada":
         return "bg-red-100 border-red-300 text-red-800";
+      case "fechada":
+        return "bg-blue-100 border-blue-300 text-blue-800";
       case "aguardando_pagamento":
         return "bg-yellow-100 border-yellow-300 text-yellow-800";
       default:
@@ -262,6 +279,8 @@ const Mesas = () => {
         return <CheckCircle className="h-4 w-4" />;
       case "ocupada":
         return <Clock className="h-4 w-4" />;
+      case "fechada":
+        return <UtensilsCrossed className="h-4 w-4" />;
       case "aguardando_pagamento":
         return <UtensilsCrossed className="h-4 w-4" />;
       default:
@@ -359,6 +378,7 @@ const Mesas = () => {
                   <Badge variant="outline" className="text-xs">
                     {mesa.status === "livre" && "Livre"}
                     {mesa.status === "ocupada" && "Ocupada"}
+                    {mesa.status === "fechada" && "Pronta"}
                     {mesa.status === "aguardando_pagamento" && "Aguardando"}
                   </Badge>
                   <div className="text-xs text-muted-foreground">
@@ -460,9 +480,38 @@ const Mesas = () => {
                           <div className="font-medium">
                             R$ {(item.quantidade * item.preco_unitario).toFixed(2)}
                           </div>
-                          <Badge variant="outline" className="text-xs">
-                            {item.status}
-                          </Badge>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="outline" className="text-xs">
+                              {item.status === "pendente" && "Pendente"}
+                              {item.status === "aguardando" && "Aguardando"}
+                              {item.status === "preparando" && "Preparando"}
+                              {item.status === "pronto" && "Pronto"}
+                            </Badge>
+                            {!item.enviado_cozinha && item.status === "pendente" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={async () => {
+                                  try {
+                                    await comandaItensService.enviarParaCozinha(item.id);
+                                    toast({
+                                      title: "Item enviado",
+                                      description: "Item enviado para a cozinha."
+                                    });
+                                    loadComandaDetalhes(comandaAtual.id);
+                                  } catch (error) {
+                                    toast({
+                                      title: "Erro",
+                                      description: "Erro ao enviar item para cozinha.",
+                                      variant: "destructive"
+                                    });
+                                  }
+                                }}
+                              >
+                                Enviar p/ Cozinha
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -512,13 +561,30 @@ const Mesas = () => {
                 >
                   Fechar
                 </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleFecharComanda}
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Fechar Comanda
-                </Button>
+                {comandaAtual?.status === "pronto_para_fechamento" ? (
+                  <Button
+                    variant="default"
+                    onClick={() => {
+                      setDialogMesaOpen(false);
+                      // Redirecionar para PDV ou mostrar que está pronta para pagamento
+                      toast({
+                        title: "Comanda pronta",
+                        description: "Esta comanda está pronta para pagamento no PDV."
+                      });
+                    }}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Pronta para Pagamento
+                  </Button>
+                ) : (
+                  <Button
+                    variant="destructive"
+                    onClick={handleFecharComanda}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Enviar para Produção
+                  </Button>
+                )}
               </div>
             </div>
           </DialogContent>

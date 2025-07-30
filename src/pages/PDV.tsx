@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { funcionariosSimplesService, type FuncionarioSimples } from "@/lib/funcionarios-simples";
-import { produtosService, comandasService, vendasService, mesasService } from "@/lib/database";
+import { produtosService, comandasService, vendasService, mesasService, pdvService } from "@/lib/database";
 import type { Produto, Mesa } from "@/types/database";
 
 interface ItemVenda {
@@ -41,13 +41,11 @@ interface ItemVenda {
 const PDV = () => {
   const [operadorSelecionado, setOperadorSelecionado] = useState<FuncionarioSimples | null>(null);
   const [funcionariosCaixa, setFuncionariosCaixa] = useState<FuncionarioSimples[]>([]);
-  const [produtos, setProdutos] = useState<Produto[]>([]);
-  const [mesas, setMesas] = useState<Mesa[]>([]);
-  const [itensVenda, setItensVenda] = useState<ItemVenda[]>([]);
+  const [comandasProntas, setComandasProntas] = useState<any[]>([]);
+  const [comandaSelecionada, setComandaSelecionada] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [dialogOperadorOpen, setDialogOperadorOpen] = useState(true);
   const [dialogFinalizarOpen, setDialogFinalizarOpen] = useState(false);
-  const [mesaSelecionada, setMesaSelecionada] = useState<string>("");
   const [formaPagamento, setFormaPagamento] = useState<string>("");
   const [valorDesconto, setValorDesconto] = useState<string>("0");
   const { toast } = useToast();
@@ -59,14 +57,12 @@ const PDV = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [funcionariosData, produtosData, mesasData] = await Promise.all([
+      const [funcionariosData, comandasData] = await Promise.all([
         funcionariosSimplesService.getByTipo('caixa'),
-        produtosService.getAll(),
-        mesasService.getAll()
+        pdvService.getComandasProntasParaFechamento()
       ]);
       setFuncionariosCaixa(funcionariosData);
-      setProdutos(produtosData);
-      setMesas(mesasData);
+      setComandasProntas(comandasData);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
       toast({
@@ -91,43 +87,14 @@ const PDV = () => {
     }
   };
 
-  const handleAdicionarProduto = (produto: Produto) => {
-    const itemExistente = itensVenda.find(item => item.produto.id === produto.id);
-    
-    if (itemExistente) {
-      setItensVenda(itens => 
-        itens.map(item => 
-          item.produto.id === produto.id 
-            ? { ...item, quantidade: item.quantidade + 1 }
-            : item
-        )
-      );
-    } else {
-      setItensVenda(itens => [...itens, { produto, quantidade: 1 }]);
-    }
-  };
-
-  const handleAlterarQuantidade = (produtoId: string, novaQuantidade: number) => {
-    if (novaQuantidade <= 0) {
-      handleRemoverItem(produtoId);
-      return;
-    }
-    
-    setItensVenda(itens => 
-      itens.map(item => 
-        item.produto.id === produtoId 
-          ? { ...item, quantidade: novaQuantidade }
-          : item
-      )
-    );
-  };
-
-  const handleRemoverItem = (produtoId: string) => {
-    setItensVenda(itens => itens.filter(item => item.produto.id !== produtoId));
+  const handleSelecionarComanda = (comanda: any) => {
+    setComandaSelecionada(comanda);
+    setDialogFinalizarOpen(true);
   };
 
   const calcularSubtotal = () => {
-    return itensVenda.reduce((total, item) => total + (item.produto.preco * item.quantidade), 0);
+    if (!comandaSelecionada) return 0;
+    return comandaSelecionada.valor_total || 0;
   };
 
   const calcularTotal = () => {
@@ -146,10 +113,10 @@ const PDV = () => {
       return;
     }
 
-    if (itensVenda.length === 0) {
+    if (!comandaSelecionada) {
       toast({
         title: "Erro",
-        description: "Adicione pelo menos um item à venda.",
+        description: "Selecione uma comanda para finalizar.",
         variant: "destructive"
       });
       return;
@@ -165,28 +132,8 @@ const PDV = () => {
     }
 
     try {
-      // Criar comanda
-      const comandaData = {
-        mesa_id: mesaSelecionada || undefined,
-        garcom_funcionario_id: operadorSelecionado.id,
-        status: "fechada" as const,
-        data_abertura: new Date().toISOString(),
-        data_fechamento: new Date().toISOString()
-      };
-
-      const comanda = await comandasService.create(comandaData);
-
-      // Adicionar itens à comanda
-      for (const item of itensVenda) {
-        await comandaItensService.create({
-          comanda_id: comanda.id,
-          produto_id: item.produto.id,
-          quantidade: item.quantidade,
-          preco_unitario: item.produto.preco,
-          status: "entregue",
-          observacoes: item.observacoes
-        });
-      }
+      // Fechar a comanda
+      await comandasService.fechar(comandaSelecionada.id);
 
       // Registrar venda
       const subtotal = calcularSubtotal();
@@ -194,7 +141,7 @@ const PDV = () => {
       const total = calcularTotal();
 
       await vendasService.create({
-        comanda_id: comanda.id,
+        comanda_id: comandaSelecionada.id,
         operador_id: operadorSelecionado.id,
         valor_total: subtotal,
         valor_desconto: desconto,
@@ -203,9 +150,9 @@ const PDV = () => {
         data_venda: new Date().toISOString()
       });
 
-      // Liberar mesa se foi selecionada
-      if (mesaSelecionada) {
-        await mesasService.updateStatus(mesaSelecionada, "livre");
+      // Liberar mesa
+      if (comandaSelecionada.mesa_id) {
+        await mesasService.updateStatus(comandaSelecionada.mesa_id, "livre");
       }
 
       toast({
@@ -214,13 +161,12 @@ const PDV = () => {
       });
 
       // Limpar venda
-      setItensVenda([]);
-      setMesaSelecionada("");
+      setComandaSelecionada(null);
       setFormaPagamento("");
       setValorDesconto("0");
       setDialogFinalizarOpen(false);
       
-      // Recarregar mesas
+      // Recarregar comandas
       loadData();
     } catch (error: any) {
       console.error("Erro ao finalizar venda:", error);
@@ -271,37 +217,55 @@ const PDV = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Produtos */}
+          {/* Comandas Prontas */}
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
-                <CardTitle>Produtos</CardTitle>
+                <CardTitle>Comandas Prontas para Pagamento</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {produtos.map((produto) => (
-                    <Card
-                      key={produto.id}
-                      className="hover:shadow-md transition-shadow cursor-pointer"
-                      onClick={() => handleAdicionarProduto(produto)}
-                    >
-                      <CardContent className="p-4">
-                        <h3 className="font-semibold mb-2">{produto.nome}</h3>
-                        <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                          {produto.descricao}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          <span className="text-lg font-bold text-primary">
-                            R$ {produto.preco.toFixed(2)}
-                          </span>
-                          <Button size="sm">
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                {comandasProntas.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">
+                      Nenhuma comanda pronta para pagamento.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {comandasProntas.map((comanda) => (
+                      <Card
+                        key={comanda.id}
+                        className="hover:shadow-md transition-shadow cursor-pointer"
+                        onClick={() => handleSelecionarComanda(comanda)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-semibold">Comanda #{comanda.numero}</h3>
+                            <Badge variant="default">Pronta</Badge>
+                          </div>
+                          {comanda.mesa && (
+                            <p className="text-sm text-muted-foreground mb-2">
+                              Mesa {comanda.mesa.numero}
+                            </p>
+                          )}
+                          {comanda.garcom_funcionario && (
+                            <p className="text-sm text-muted-foreground mb-2">
+                              Garçom: {comanda.garcom_funcionario.nome}
+                            </p>
+                          )}
+                          <div className="flex items-center justify-between">
+                            <span className="text-lg font-bold text-primary">
+                              R$ {comanda.valor_total.toFixed(2)}
+                            </span>
+                            <span className="text-sm text-muted-foreground">
+                              {comanda.itens?.length || 0} itens
+                            </span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -313,62 +277,47 @@ const PDV = () => {
                 <CardTitle>Resumo da Venda</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {itensVenda.length === 0 ? (
+                {!comandaSelecionada ? (
                   <p className="text-muted-foreground text-center py-8">
-                    Nenhum item adicionado
+                    Selecione uma comanda para finalizar
                   </p>
                 ) : (
                   <>
                     <div className="space-y-3">
-                      {itensVenda.map((item) => (
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <h4 className="font-medium">Comanda #{comandaSelecionada.numero}</h4>
+                        {comandaSelecionada.mesa && (
+                          <p className="text-sm text-muted-foreground">
+                            Mesa {comandaSelecionada.mesa.numero}
+                          </p>
+                        )}
+                        {comandaSelecionada.garcom_funcionario && (
+                          <p className="text-sm text-muted-foreground">
+                            Garçom: {comandaSelecionada.garcom_funcionario.nome}
+                          </p>
+                        )}
+                      </div>
+
+                      {comandaSelecionada.itens?.map((item: any) => (
                         <div
-                          key={item.produto.id}
+                          key={item.id}
                           className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                         >
                           <div className="flex-1">
-                            <h4 className="font-medium">{item.produto.nome}</h4>
+                            <h4 className="font-medium">{item.produto?.nome}</h4>
                             <p className="text-sm text-muted-foreground">
-                              R$ {item.produto.preco.toFixed(2)} cada
+                              {item.quantidade}x R$ {item.preco_unitario.toFixed(2)}
                             </p>
+                            {item.observacoes && (
+                              <p className="text-xs text-muted-foreground">
+                                Obs: {item.observacoes}
+                              </p>
+                            )}
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() =>
-                                handleAlterarQuantidade(
-                                  item.produto.id,
-                                  item.quantidade - 1
-                                )
-                              }
-                            >
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <span className="w-8 text-center font-medium">
-                              {item.quantidade}
+                          <div className="text-right">
+                            <span className="font-medium">
+                              R$ {(item.quantidade * item.preco_unitario).toFixed(2)}
                             </span>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() =>
-                                handleAlterarQuantidade(
-                                  item.produto.id,
-                                  item.quantidade + 1
-                                )
-                              }
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => handleRemoverItem(item.produto.id)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
                           </div>
                         </div>
                       ))}
@@ -463,82 +412,77 @@ const PDV = () => {
             <DialogHeader>
               <DialogTitle>Finalizar Venda</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="mesa">Mesa (Opcional)</Label>
-                <Select value={mesaSelecionada} onValueChange={setMesaSelecionada}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma mesa (opcional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Venda no balcão</SelectItem>
-                    {mesas
-                      .filter(mesa => mesa.status === "ocupada")
-                      .map((mesa) => (
-                        <SelectItem key={mesa.id} value={mesa.id}>
-                          Mesa {mesa.numero}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="forma_pagamento">Forma de Pagamento *</Label>
-                <Select value={formaPagamento} onValueChange={setFormaPagamento}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a forma de pagamento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                    <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
-                    <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
-                    <SelectItem value="pix">PIX</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="desconto">Desconto (R$)</Label>
-                <Input
-                  id="desconto"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={valorDesconto}
-                  onChange={(e) => setValorDesconto(e.target.value)}
-                  placeholder="0.00"
-                />
-              </div>
-
-              <div className="bg-muted p-4 rounded-lg space-y-2">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span>R$ {calcularSubtotal().toFixed(2)}</span>
+            {comandaSelecionada && (
+              <div className="space-y-4">
+                <div className="p-4 bg-muted rounded-lg">
+                  <h4 className="font-medium">Comanda #{comandaSelecionada.numero}</h4>
+                  {comandaSelecionada.mesa && (
+                    <p className="text-sm text-muted-foreground">
+                      Mesa {comandaSelecionada.mesa.numero}
+                    </p>
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    {comandaSelecionada.itens?.length || 0} itens
+                  </p>
                 </div>
-                <div className="flex justify-between">
-                  <span>Desconto:</span>
-                  <span>R$ {(parseFloat(valorDesconto) || 0).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-lg font-bold">
-                  <span>Total:</span>
-                  <span>R$ {calcularTotal().toFixed(2)}</span>
-                </div>
-              </div>
 
-              <div className="flex justify-end space-x-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setDialogFinalizarOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button onClick={handleFinalizarVenda}>
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Confirmar Venda
-                </Button>
+                <div>
+                  <Label htmlFor="forma_pagamento">Forma de Pagamento *</Label>
+                  <Select value={formaPagamento} onValueChange={setFormaPagamento}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a forma de pagamento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                      <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
+                      <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
+                      <SelectItem value="pix">PIX</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="desconto">Desconto (R$)</Label>
+                  <Input
+                    id="desconto"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={valorDesconto}
+                    onChange={(e) => setValorDesconto(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div className="bg-muted p-4 rounded-lg space-y-2">
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span>R$ {calcularSubtotal().toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Desconto:</span>
+                    <span>R$ {(parseFloat(valorDesconto) || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Total:</span>
+                    <span>R$ {calcularTotal().toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setDialogFinalizarOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleFinalizarVenda}>
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Confirmar Venda
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>

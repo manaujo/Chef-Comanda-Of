@@ -1,7 +1,7 @@
 export type UserType = 'administrador' | 'garcom' | 'caixa' | 'estoque' | 'cozinha';
-export type MesaStatus = 'livre' | 'ocupada' | 'reservada' | 'manutencao' | 'aguardando_pagamento';
-export type ComandaStatus = 'aberta' | 'fechada' | 'cancelada' | 'em_preparo' | 'pronta';
-export type ItemStatus = 'pendente' | 'recebido' | 'em_preparo' | 'pronto' | 'entregue' | 'cancelado' | 'enviado' | 'preparando';
+export type MesaStatus = 'livre' | 'ocupada' | 'reservada' | 'manutencao' | 'aguardando_pagamento' | 'fechada';
+export type ComandaStatus = 'aberta' | 'fechada' | 'cancelada' | 'em_preparo' | 'pronta' | 'pronto_para_fechamento';
+export type ItemStatus = 'pendente' | 'recebido' | 'em_preparo' | 'pronto' | 'entregue' | 'cancelado' | 'enviado' | 'preparando' | 'aguardando';
 export type AssinaturaStatus = 'ativa' | 'vencida' | 'cancelada' | 'suspensa';
 export type AssinaturaTipo = 'mensal' | 'anual';
 export type UnidadeMedida = 'kg' | 'g' | 'l' | 'ml' | 'un' | 'cx' | 'pct';
@@ -94,6 +94,7 @@ export interface Mesa {
   nome?: string;
   capacidade: number;
   status: MesaStatus;
+  comanda_id?: string;
   qr_code?: string;
   observacoes?: string;
   ativo: boolean;
@@ -138,6 +139,7 @@ export interface ComandaItem {
   quantidade: number;
   preco_unitario: number;
   status: ItemStatus;
+  enviado_cozinha: boolean;
   observacoes?: string;
   cancelado_por?: string;
   motivo_cancelamento?: string;
