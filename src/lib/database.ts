@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { funcionariosService } from './funcionarios';
 import { funcionariosSimplesService } from './funcionarios-simples';
+import { comandaItensService } from './database';
 import type { 
   Profile, 
   Mesa, 
