@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { funcionariosService } from './funcionarios';
+import { funcionariosSimplesService } from './funcionarios-simples';
 import type { 
   Profile, 
   Mesa, 
@@ -18,6 +19,7 @@ import type {
   ItemStatus,
   CategoriaProduto
 } from '../types/database';
+import type { FuncionarioSimples } from './funcionarios-simples';
 
 // Profiles
 export const profilesService = {
@@ -281,7 +283,8 @@ export const comandasService = {
       .select(`
         *,
         mesa:mesas(*),
-        garcom:funcionarios(*),
+        garcom:profiles(*),
+        garcom_funcionario:funcionarios_simples(*),
         itens:comanda_itens(
           *,
           produto:produtos(*)
@@ -299,7 +302,8 @@ export const comandasService = {
       .select(`
         *,
         mesa:mesas(*),
-        garcom:funcionarios(*),
+        garcom:profiles(*),
+        garcom_funcionario:funcionarios_simples(*),
         itens:comanda_itens(
           *,
           produto:produtos(*)
@@ -318,7 +322,8 @@ export const comandasService = {
       .select(`
         *,
         mesa:mesas(*),
-        garcom:funcionarios(*),
+        garcom:profiles(*),
+        garcom_funcionario:funcionarios_simples(*),
         itens:comanda_itens(
           *,
           produto:produtos(*)
@@ -338,7 +343,8 @@ export const comandasService = {
       .select(`
         *,
         mesa:mesas(*),
-        garcom:funcionarios(*),
+        garcom:profiles(*),
+        garcom_funcionario:funcionarios_simples(*),
         itens:comanda_itens(
           *,
           produto:produtos(*)
@@ -352,23 +358,16 @@ export const comandasService = {
   },
 
   async create(comanda: Omit<Comanda, 'id' | 'numero' | 'created_at' | 'updated_at' | 'valor_total'>) {
-    // Obter o funcionário atual para usar como garçom
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuário não autenticado');
-    
-    const funcionario = await funcionariosService.getByUserId(user.id);
-    if (!funcionario) throw new Error('Funcionário não encontrado');
-    
     const { data, error } = await supabase
       .from('comandas')
       .insert({
-        ...comanda,
-        garcom_id: funcionario.user_id
+        ...comanda
       })
       .select(`
         *,
         mesa:mesas(*),
-        garcom:funcionarios(*)
+        garcom:profiles(*),
+        garcom_funcionario:funcionarios_simples(*)
       `)
       .single();
     
@@ -384,7 +383,8 @@ export const comandasService = {
       .select(`
         *,
         mesa:mesas(*),
-        garcom:funcionarios(*)
+        garcom:profiles(*),
+        garcom_funcionario:funcionarios_simples(*)
       `)
       .single();
     
@@ -548,7 +548,8 @@ export const turnosService = {
       .from('turnos')
       .select(`
         *,
-        operador:profiles(*)
+        operador:profiles(*),
+        operador_funcionario:funcionarios_simples(*)
       `)
       .eq('ativo', true)
       .is('data_fechamento', null)
@@ -576,6 +577,26 @@ export const turnosService = {
     return data as Turno;
   },
 
+  async abrirComFuncionario(operador_id: string, operador_funcionario_id: string, valor_inicial: number) {
+    const { data, error } = await supabase
+      .from('turnos')
+      .insert({
+        operador_id,
+        operador_funcionario_id,
+        valor_inicial,
+        ativo: true
+      })
+      .select(`
+        *,
+        operador:profiles(*),
+        operador_funcionario:funcionarios_simples(*)
+      `)
+      .single();
+    
+    if (error) throw error;
+    return data as Turno;
+  },
+
   async fechar(id: string, valor_fechamento: number, observacoes?: string) {
     const { data, error } = await supabase
       .from('turnos')
@@ -588,7 +609,8 @@ export const turnosService = {
       .eq('id', id)
       .select(`
         *,
-        operador:profiles(*)
+        operador:profiles(*),
+        operador_funcionario:funcionarios_simples(*)
       `)
       .single();
     

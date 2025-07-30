@@ -51,7 +51,7 @@ export const funcionariosService = {
       .from('funcionarios')
       .select('id, nome, cpf, tipo, ativo, created_at, updated_at')
       .eq('cpf', cpf)
-      .single();
+      .maybeSingle();
     
     if (error && error.code !== 'PGRST116') throw error;
     return data as FuncionarioLocal | null;
@@ -146,7 +146,7 @@ export const funcionariosAuthService = {
     }
 
     // Criar usuário no Supabase Auth usando CPF como email
-    const email = `${funcionarioData.cpf}@chefcomanda.com`;
+    const email = `cpf_${funcionarioData.cpf}@chefcomanda.com`;
     
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
@@ -197,7 +197,7 @@ export const funcionariosAuthService = {
   },
 
   async signInWithCpf(cpf: string, password: string) {
-    const email = `${cpf}@chefcomanda.com`;
+    const email = `cpf_${cpf}@chefcomanda.com`;
     
     const { data, error } = await supabase.auth.signInWithPassword({
       email,

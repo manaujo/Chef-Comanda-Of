@@ -130,7 +130,7 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
           roles: ["admin"]
         },
         {
-          title: "Gerenciar Funcionários",
+          title: "Funcionários",
           href: "/gerenciar-funcionarios",
           icon: Users,
           roles: ["admin"]

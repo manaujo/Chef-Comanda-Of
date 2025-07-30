@@ -265,6 +265,11 @@ const Cozinha = () => {
                 <div className="text-sm text-muted-foreground">
                   Garçom: {mesaData.comanda?.garcom?.nome_completo}
                 </div>
+                {mesaData.comanda?.garcom_funcionario && (
+                  <div className="text-sm text-muted-foreground">
+                    Garçom: {mesaData.comanda.garcom_funcionario.nome}
+                  </div>
+                )}
               </CardHeader>
               <CardContent className="space-y-4">
                 {categorias.map((categoria) => {

@@ -12,6 +12,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
   Clock,
@@ -25,11 +32,13 @@ import {
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { turnosService } from "@/lib/database";
 import { useAuth } from "@/hooks/useAuth";
+import { funcionariosSimplesService, type FuncionarioSimples } from "@/lib/funcionarios-simples";
 import type { Turno } from "@/types/database";
 
 const Turnos = () => {
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [turnoAtivo, setTurnoAtivo] = useState<Turno | null>(null);
+  const [funcionariosCaixa, setFuncionariosCaixa] = useState<FuncionarioSimples[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogAbrirOpen, setDialogAbrirOpen] = useState(false);
   const [dialogFecharOpen, setDialogFecharOpen] = useState(false);
@@ -37,7 +46,8 @@ const Turnos = () => {
   const { toast } = useToast();
 
   const [formAbrir, setFormAbrir] = useState({
-    valor_inicial: "0"
+    valor_inicial: "0",
+    operador_funcionario_id: ""
   });
 
   const [formFechar, setFormFechar] = useState({
@@ -46,14 +56,18 @@ const Turnos = () => {
   });
 
   useEffect(() => {
-    loadTurnos();
+    loadData();
   }, []);
 
-  const loadTurnos = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const turnoAtivoData = await turnosService.getTurnoAtivo();
+      const [turnoAtivoData, funcionariosData] = await Promise.all([
+        turnosService.getTurnoAtivo(),
+        funcionariosSimplesService.getByTipo('caixa')
+      ]);
       setTurnoAtivo(turnoAtivoData);
+      setFuncionariosCaixa(funcionariosData);
 
       // Aqui você pode carregar histórico de turnos se necessário
       // const turnosData = await turnosService.getAll();
@@ -85,7 +99,20 @@ const Turnos = () => {
     try {
       const valorInicial = parseFloat(formAbrir.valor_inicial) || 0;
 
-      const turno = await turnosService.abrir(user.id, valorInicial);
+      if (!formAbrir.operador_funcionario_id) {
+        toast({
+          title: "Erro",
+          description: "Selecione um operador de caixa.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const turno = await turnosService.abrirComFuncionario(
+        user.id, 
+        formAbrir.operador_funcionario_id, 
+        valorInicial
+      );
 
       toast({
         title: "Turno aberto",
@@ -95,8 +122,8 @@ const Turnos = () => {
       });
 
       setDialogAbrirOpen(false);
-      setFormAbrir({ valor_inicial: "0" });
-      loadTurnos();
+      setFormAbrir({ valor_inicial: "0", operador_funcionario_id: "" });
+      loadData();
     } catch (error: any) {
       console.error("Erro ao abrir turno:", error);
       toast({
@@ -137,7 +164,7 @@ const Turnos = () => {
 
       setDialogFecharOpen(false);
       setFormFechar({ valor_fechamento: "0", observacoes: "" });
-      loadTurnos();
+      loadData();
     } catch (error: any) {
       console.error("Erro ao fechar turno:", error);
       toast({
@@ -206,6 +233,35 @@ const Turnos = () => {
                   <DialogTitle>Abrir Novo Turno</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleAbrirTurno} className="space-y-4">
+                  <div>
+                    <Label htmlFor="operador_funcionario_id">
+                      Operador de Caixa *
+                    </Label>
+                    <Select
+                      value={formAbrir.operador_funcionario_id}
+                      onValueChange={(value) =>
+                        setFormAbrir({ ...formAbrir, operador_funcionario_id: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um operador de caixa" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {funcionariosCaixa.map((funcionario) => (
+                          <SelectItem key={funcionario.id} value={funcionario.id}>
+                            {funcionario.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {funcionariosCaixa.length === 0 && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Nenhum funcionário de caixa ativo encontrado. 
+                        Cadastre funcionários na tela de Gerenciar Funcionários.
+                      </p>
+                    )}
+                  </div>
+
                   <div>
                     <Label htmlFor="valor_inicial">
                       Valor Inicial do Caixa (R$)
@@ -379,7 +435,7 @@ const Turnos = () => {
                   <div>
                     <p className="text-sm text-muted-foreground">Operador</p>
                     <p className="font-medium">
-                      {turnoAtivo.operador?.nome_completo}
+                      {turnoAtivo.operador_funcionario?.nome || turnoAtivo.operador?.nome_completo}
                     </p>
                   </div>
                 </div>

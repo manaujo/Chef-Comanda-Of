@@ -419,7 +419,9 @@ const Comandas = () => {
                 {comanda.garcom && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Garçom:</span>
-                    <span className="font-medium">{comanda.garcom.nome}</span>
+                    <span className="font-medium">
+                      {comanda.garcom_funcionario?.nome || comanda.garcom?.nome_completo}
+                    </span>
                   </div>
                 )}
 

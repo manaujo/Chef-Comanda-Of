@@ -21,36 +21,30 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Users, UserCheck, UserX } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { funcionariosService, type FuncionarioLocal } from "@/lib/funcionarios";
+import { funcionariosSimplesService, type FuncionarioSimples, type FuncionarioTipo } from "@/lib/funcionarios-simples";
 import { useAuth } from "@/hooks/useAuth";
-
-import type { UserType } from "@/types/database";
 
 const GerenciarFuncionarios = () => {
   const { user } = useAuth();
-  const [funcionarios, setFuncionarios] = useState<FuncionarioLocal[]>([]);
+  const [funcionarios, setFuncionarios] = useState<FuncionarioSimples[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingFuncionario, setEditingFuncionario] =
-    useState<FuncionarioLocal | null>(null);
+  const [editingFuncionario, setEditingFuncionario] = useState<FuncionarioSimples | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     nome: "",
-    cpf: "",
-    tipo: "garcom" as UserType,
-    senha: "",
-    confirmSenha: ""
+    tipo: "garcom" as FuncionarioTipo
   });
 
   useEffect(() => {
     loadFuncionarios();
-  }, [user]);
+  }, []);
 
   const loadFuncionarios = async () => {
     try {
       setLoading(true);
-      const data = await funcionariosService.getAll();
+      const data = await funcionariosSimplesService.getAll();
       setFuncionarios(data);
     } catch (error) {
       console.error("Erro ao carregar funcionários:", error);
@@ -64,21 +58,10 @@ const GerenciarFuncionarios = () => {
     }
   };
 
-  const formatCPF = (value: string) => {
-    return value
-      .replace(/\D/g, "")
-      .replace(/(\d{3})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d{1,2})/, "$1-$2")
-      .replace(/(-\d{2})\d+?$/, "$1");
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const isAdmin =
-      user?.tipo === "admin" ||
-      (user?.userData as any)?.tipo === "administrador";
+    const isAdmin = user?.tipo === "admin" || (user?.userData as any)?.tipo === "administrador";
 
     if (!isAdmin) {
       toast({
@@ -91,8 +74,7 @@ const GerenciarFuncionarios = () => {
 
     try {
       if (editingFuncionario) {
-        // Atualizar funcionário existente
-        await funcionariosService.update(editingFuncionario.id, {
+        await funcionariosSimplesService.update(editingFuncionario.id, {
           nome: formData.nome,
           tipo: formData.tipo
         });
@@ -102,41 +84,10 @@ const GerenciarFuncionarios = () => {
           description: "Funcionário atualizado com sucesso."
         });
       } else {
-        // Validações para novo funcionário
-        if (!formData.senha || formData.senha.length < 6) {
-          toast({
-            title: "Erro",
-            description: "A senha deve ter pelo menos 6 caracteres.",
-            variant: "destructive"
-          });
-          return;
-        }
-
-        if (formData.senha !== formData.confirmSenha) {
-          toast({
-            title: "Erro",
-            description: "As senhas não coincidem.",
-            variant: "destructive"
-          });
-          return;
-        }
-
-        const cpfLimpo = formData.cpf.replace(/\D/g, "");
-        if (cpfLimpo.length !== 11) {
-          toast({
-            title: "Erro",
-            description: "CPF deve ter 11 dígitos.",
-            variant: "destructive"
-          });
-          return;
-        }
-
-        // Criar novo funcionário
-        await funcionariosService.createLocal({
+        await funcionariosSimplesService.create({
           nome: formData.nome,
-          cpf: cpfLimpo,
-          senha: formData.senha,
-          tipo: formData.tipo
+          tipo: formData.tipo,
+          ativo: true
         });
 
         toast({
@@ -150,41 +101,25 @@ const GerenciarFuncionarios = () => {
       loadFuncionarios();
     } catch (error: any) {
       console.error("Erro ao salvar funcionário:", error);
-
-      let errorMessage = "Erro ao salvar funcionário.";
-
-      if (error.message?.includes("CPF já cadastrado")) {
-        errorMessage = "Este CPF já está cadastrado.";
-      } else if (error.message?.includes("User already registered")) {
-        errorMessage = "Este CPF já está cadastrado no sistema.";
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
       toast({
         title: "Erro",
-        description: errorMessage,
+        description: error.message || "Erro ao salvar funcionário.",
         variant: "destructive"
       });
     }
   };
 
-  const handleEdit = (funcionario: FuncionarioLocal) => {
+  const handleEdit = (funcionario: FuncionarioSimples) => {
     setEditingFuncionario(funcionario);
     setFormData({
       nome: funcionario.nome,
-      cpf: formatCPF(funcionario.cpf),
-      tipo: funcionario.tipo,
-      senha: "",
-      confirmSenha: ""
+      tipo: funcionario.tipo
     });
     setDialogOpen(true);
   };
 
-  const handleToggleStatus = async (funcionario: FuncionarioLocal) => {
-    const isAdmin =
-      user?.tipo === "admin" ||
-      (user?.userData as any)?.tipo === "administrador";
+  const handleToggleStatus = async (funcionario: FuncionarioSimples) => {
+    const isAdmin = user?.tipo === "admin" || (user?.userData as any)?.tipo === "administrador";
 
     if (!isAdmin) {
       toast({
@@ -196,15 +131,13 @@ const GerenciarFuncionarios = () => {
     }
 
     try {
-      await funcionariosService.updateLocal(funcionario.id, {
+      await funcionariosSimplesService.update(funcionario.id, {
         ativo: !funcionario.ativo
       });
 
       toast({
         title: "Status atualizado",
-        description: `Funcionário ${
-          funcionario.ativo ? "desativado" : "ativado"
-        } com sucesso.`
+        description: `Funcionário ${funcionario.ativo ? "desativado" : "ativado"} com sucesso.`
       });
 
       loadFuncionarios();
@@ -221,18 +154,13 @@ const GerenciarFuncionarios = () => {
   const resetForm = () => {
     setFormData({
       nome: "",
-      cpf: "",
-      tipo: "garcom",
-      senha: "",
-      confirmSenha: ""
+      tipo: "garcom"
     });
     setEditingFuncionario(null);
   };
 
-  const getTipoColor = (tipo: UserType) => {
+  const getTipoColor = (tipo: FuncionarioTipo) => {
     switch (tipo) {
-      case "administrador":
-        return "destructive";
       case "garcom":
         return "default";
       case "caixa":
@@ -246,10 +174,8 @@ const GerenciarFuncionarios = () => {
     }
   };
 
-  const getTipoLabel = (tipo: UserType) => {
+  const getTipoLabel = (tipo: FuncionarioTipo) => {
     switch (tipo) {
-      case "administrador":
-        return "Administrador";
       case "garcom":
         return "Garçom";
       case "caixa":
@@ -263,8 +189,7 @@ const GerenciarFuncionarios = () => {
     }
   };
 
-  const isAdmin =
-    user?.tipo === "admin" || (user?.userData as any)?.tipo === "administrador";
+  const isAdmin = user?.tipo === "admin" || (user?.userData as any)?.tipo === "administrador";
 
   if (!isAdmin) {
     return (
@@ -300,10 +225,10 @@ const GerenciarFuncionarios = () => {
           <div className="flex-1">
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold flex items-center space-x-2">
               <Users className="h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10" />
-              <span>Funcionários</span>
+              <span>Gerenciar Funcionários</span>
             </h1>
             <p className="text-sm sm:text-base lg:text-lg text-muted-foreground mt-1">
-              Gerencie os funcionários do restaurante
+              Cadastre e gerencie os funcionários do restaurante
             </p>
           </div>
 
@@ -320,55 +245,31 @@ const GerenciarFuncionarios = () => {
                 Novo Funcionário
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent>
               <DialogHeader>
                 <DialogTitle>
-                  {editingFuncionario
-                    ? "Editar Funcionário"
-                    : "Novo Funcionário"}
+                  {editingFuncionario ? "Editar Funcionário" : "Novo Funcionário"}
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="nome">Nome Completo *</Label>
-                    <Input
-                      id="nome"
-                      value={formData.nome}
-                      onChange={(e) =>
-                        setFormData({ ...formData, nome: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="cpf">CPF *</Label>
-                    <Input
-                      id="cpf"
-                      value={formData.cpf}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          cpf: formatCPF(e.target.value)
-                        })
-                      }
-                      maxLength={14}
-                      disabled={!!editingFuncionario}
-                      required
-                    />
-                    {editingFuncionario && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        O CPF não pode ser alterado
-                      </p>
-                    )}
-                  </div>
+                <div>
+                  <Label htmlFor="nome">Nome do Funcionário *</Label>
+                  <Input
+                    id="nome"
+                    value={formData.nome}
+                    onChange={(e) =>
+                      setFormData({ ...formData, nome: e.target.value })
+                    }
+                    placeholder="Digite o nome completo"
+                    required
+                  />
                 </div>
 
                 <div>
                   <Label htmlFor="tipo">Tipo de Funcionário *</Label>
                   <Select
                     value={formData.tipo}
-                    onValueChange={(value: UserType) =>
+                    onValueChange={(value: FuncionarioTipo) =>
                       setFormData({ ...formData, tipo: value })
                     }
                   >
@@ -378,50 +279,18 @@ const GerenciarFuncionarios = () => {
                     <SelectContent>
                       <SelectItem value="garcom">Garçom</SelectItem>
                       <SelectItem value="caixa">Caixa</SelectItem>
-                      <SelectItem value="estoque">Estoque</SelectItem>
                       <SelectItem value="cozinha">Cozinha</SelectItem>
+                      <SelectItem value="estoque">Estoque</SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Administradores são criados via registro principal
-                  </p>
                 </div>
 
-                {!editingFuncionario && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="senha">Senha *</Label>
-                      <Input
-                        id="senha"
-                        type="password"
-                        value={formData.senha}
-                        onChange={(e) =>
-                          setFormData({ ...formData, senha: e.target.value })
-                        }
-                        required={!editingFuncionario}
-                        minLength={6}
-                        placeholder="Mínimo 6 caracteres"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="confirmSenha">Confirmar Senha *</Label>
-                      <Input
-                        id="confirmSenha"
-                        type="password"
-                        value={formData.confirmSenha}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            confirmSenha: e.target.value
-                          })
-                        }
-                        required={!editingFuncionario}
-                        minLength={6}
-                        placeholder="Digite a senha novamente"
-                      />
-                    </div>
-                  </div>
-                )}
+                <div className="bg-muted p-4 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Nota:</strong> Os funcionários não fazem login no sistema. 
+                    Eles são apenas atribuídos nas operações internas como PDV, mesas e relatórios.
+                  </p>
+                </div>
 
                 <div className="flex justify-end space-x-2">
                   <Button
@@ -458,9 +327,7 @@ const GerenciarFuncionarios = () => {
                 <UserCheck className="h-4 w-4 text-green-600" />
                 <span className="text-sm font-medium">Ativos</span>
               </div>
-              <div className="text-2xl font-bold">
-                {funcionariosAtivos.length}
-              </div>
+              <div className="text-2xl font-bold">{funcionariosAtivos.length}</div>
             </CardContent>
           </Card>
 
@@ -470,9 +337,7 @@ const GerenciarFuncionarios = () => {
                 <UserX className="h-4 w-4 text-red-600" />
                 <span className="text-sm font-medium">Inativos</span>
               </div>
-              <div className="text-2xl font-bold">
-                {funcionariosInativos.length}
-              </div>
+              <div className="text-2xl font-bold">{funcionariosInativos.length}</div>
             </CardContent>
           </Card>
 
@@ -492,10 +357,7 @@ const GerenciarFuncionarios = () => {
         {/* Funcionários Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {funcionarios.map((funcionario) => (
-            <Card
-              key={funcionario.id}
-              className="hover:shadow-md transition-shadow"
-            >
+            <Card key={funcionario.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{funcionario.nome}</CardTitle>
@@ -503,9 +365,7 @@ const GerenciarFuncionarios = () => {
                     <Badge variant={getTipoColor(funcionario.tipo)}>
                       {getTipoLabel(funcionario.tipo)}
                     </Badge>
-                    <Badge
-                      variant={funcionario.ativo ? "default" : "destructive"}
-                    >
+                    <Badge variant={funcionario.ativo ? "default" : "destructive"}>
                       {funcionario.ativo ? "Ativo" : "Inativo"}
                     </Badge>
                   </div>
@@ -513,16 +373,9 @@ const GerenciarFuncionarios = () => {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="text-sm">
-                  <span className="text-muted-foreground">CPF:</span>
-                  <span className="ml-2">{formatCPF(funcionario.cpf)}</span>
-                </div>
-
-                <div className="text-sm">
                   <span className="text-muted-foreground">Cadastrado em:</span>
                   <span className="ml-2">
-                    {new Date(funcionario.created_at).toLocaleDateString(
-                      "pt-BR"
-                    )}
+                    {new Date(funcionario.created_at).toLocaleDateString("pt-BR")}
                   </span>
                 </div>
 
@@ -530,10 +383,7 @@ const GerenciarFuncionarios = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      handleEdit(funcionario);
-                      setDialogOpen(true);
-                    }}
+                    onClick={() => handleEdit(funcionario)}
                     className="flex-1"
                   >
                     <Edit className="h-3 w-3 mr-1" />

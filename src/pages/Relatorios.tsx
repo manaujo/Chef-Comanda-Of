@@ -254,6 +254,7 @@ const Relatorios = () => {
                       <th className="text-left p-2">Data</th>
                       <th className="text-left p-2">Comanda</th>
                       <th className="text-left p-2">Operador</th>
+                      <th className="text-left p-2">Funcionário</th>
                       <th className="text-left p-2">Valor Total</th>
                       <th className="text-left p-2">Desconto</th>
                       <th className="text-left p-2">Valor Final</th>
@@ -270,6 +271,7 @@ const Relatorios = () => {
                         </td>
                         <td className="p-2">#{venda.comanda?.numero}</td>
                         <td className="p-2">{venda.operador?.nome_completo}</td>
+                        <td className="p-2">{venda.turno?.operador_funcionario?.nome || '-'}</td>
                         <td className="p-2">
                           R$ {venda.valor_total.toFixed(2)}
                         </td>

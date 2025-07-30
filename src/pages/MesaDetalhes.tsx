@@ -35,6 +35,7 @@ import {
   produtosService,
   subscribeToTable
 } from "@/lib/database";
+import { funcionariosSimplesService, type FuncionarioSimples } from "@/lib/funcionarios-simples";
 import type {
   Mesa,
   Comanda,
@@ -52,11 +53,14 @@ const MesaDetalhes = () => {
   const [mesa, setMesa] = useState<Mesa | null>(null);
   const [comanda, setComanda] = useState<Comanda | null>(null);
   const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [garconsDisponiveis, setGarconsDisponiveis] = useState<FuncionarioSimples[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogGarcomOpen, setDialogGarcomOpen] = useState(false);
   const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(
     null
   );
+  const [garcomSelecionado, setGarcomSelecionado] = useState<string>("");
   const [quantidade, setQuantidade] = useState(1);
   const [observacoes, setObservacoes] = useState("");
 
@@ -101,13 +105,15 @@ const MesaDetalhes = () => {
 
     try {
       setLoading(true);
-      const [mesaData, produtosData] = await Promise.all([
+      const [mesaData, produtosData, garconsData] = await Promise.all([
         mesasService.getById(id),
-        produtosService.getByCategoria()
+        produtosService.getByCategoria(),
+        funcionariosSimplesService.getByTipo('garcom')
       ]);
 
       setMesa(mesaData);
       setProdutos(produtosData);
+      setGarconsDisponiveis(garconsData);
 
       // Carregar comanda se existir
       await loadComandaData();
@@ -142,9 +148,15 @@ const MesaDetalhes = () => {
 
       // Se não existe comanda, criar uma nova
       if (!comandaAtual && mesa) {
+        // Se não há comanda, verificar se há garçom selecionado
+        if (!garcomSelecionado) {
+          setDialogGarcomOpen(true);
+          return;
+        }
+
         const novaComanda = await comandasService.create({
           mesa_id: mesa.id,
-          garcom_id: user.id,
+          garcom_funcionario_id: garcomSelecionado,
           status: "aberta",
           data_abertura: new Date().toISOString()
         });
@@ -194,6 +206,59 @@ const MesaDetalhes = () => {
     setQuantidade(1);
     setObservacoes("");
     setDialogOpen(true);
+  };
+
+  const handleSelecionarGarcom = async () => {
+    if (!garcomSelecionado || !mesa) return;
+
+    try {
+      const novaComanda = await comandasService.create({
+        mesa_id: mesa.id,
+        garcom_funcionario_id: garcomSelecionado,
+        status: "aberta",
+        data_abertura: new Date().toISOString()
+      });
+      
+      setComanda(novaComanda);
+      setDialogGarcomOpen(false);
+      
+      toast({
+        title: "Comanda criada",
+        description: "Comanda criada com garçom responsável."
+      });
+      
+      // Se há produto selecionado, adicionar automaticamente
+      if (produtoSelecionado) {
+        await comandaItensService.create({
+          comanda_id: novaComanda.id,
+          produto_id: produtoSelecionado.id,
+          quantidade,
+          preco_unitario: produtoSelecionado.preco,
+          status: "enviado",
+          observacoes: observacoes || undefined
+        });
+
+        toast({
+          title: "Item adicionado",
+          description: `${produtoSelecionado.nome} adicionado à comanda.`
+        });
+
+        // Resetar form
+        setDialogOpen(false);
+        setProdutoSelecionado(null);
+        setQuantidade(1);
+        setObservacoes("");
+      }
+      
+      loadComandaData();
+    } catch (error: any) {
+      console.error("Erro ao criar comanda:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao criar comanda.",
+        variant: "destructive"
+      });
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -298,6 +363,11 @@ const MesaDetalhes = () => {
             {comanda && (
               <Badge variant="outline">Comanda #{comanda.numero}</Badge>
             )}
+            {comanda?.garcom_funcionario && (
+              <Badge variant="secondary">
+                Garçom: {comanda.garcom_funcionario.nome}
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -348,6 +418,11 @@ const MesaDetalhes = () => {
                             {item.status === "pronto" && "Pronto"}
                           </span>
                         </Badge>
+                        {comanda.garcom_funcionario && (
+                          <div className="text-sm text-muted-foreground ml-2">
+                            Garçom: {comanda.garcom_funcionario.nome}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -544,6 +619,62 @@ const MesaDetalhes = () => {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog para Selecionar Garçom */}
+        <Dialog open={dialogGarcomOpen} onOpenChange={setDialogGarcomOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Selecionar Garçom Responsável</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Selecione o garçom que será responsável por esta mesa:
+              </p>
+              
+              <div>
+                <Label htmlFor="garcom">Garçom Responsável *</Label>
+                <Select
+                  value={garcomSelecionado}
+                  onValueChange={setGarcomSelecionado}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um garçom" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {garconsDisponiveis.map((garcom) => (
+                      <SelectItem key={garcom.id} value={garcom.id}>
+                        {garcom.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {garconsDisponiveis.length === 0 && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Nenhum garçom ativo encontrado. 
+                    Cadastre garçons na tela de Gerenciar Funcionários.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDialogGarcomOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleSelecionarGarcom}
+                  disabled={!garcomSelecionado}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Confirmar Garçom
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

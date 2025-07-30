@@ -106,6 +106,7 @@ export interface Comanda {
   numero: number;
   mesa_id?: string;
   garcom_id?: string;
+  garcom_funcionario_id?: string;
   status: ComandaStatus;
   observacoes?: string;
   data_abertura: string;
@@ -117,6 +118,12 @@ export interface Comanda {
     nome: string;
     cpf: string;
     tipo: UserType;
+    ativo: boolean;
+  };
+  garcom_funcionario?: {
+    id: string;
+    nome: string;
+    tipo: string;
     ativo: boolean;
   };
   itens?: ComandaItem[];
@@ -142,6 +149,7 @@ export interface ComandaItem {
 export interface Turno {
   id: string;
   operador_id: string;
+  operador_funcionario_id?: string;
   data_abertura: string;
   data_fechamento?: string;
   valor_inicial: number;
@@ -149,6 +157,12 @@ export interface Turno {
   observacoes?: string;
   ativo: boolean;
   operador?: Profile;
+  operador_funcionario?: {
+    id: string;
+    nome: string;
+    tipo: string;
+    ativo: boolean;
+  };
   created_at: string;
 }
 
