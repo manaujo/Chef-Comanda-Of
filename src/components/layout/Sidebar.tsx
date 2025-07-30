@@ -1,29 +1,25 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { useAuth } from "@/hooks/useAuth";
-import { useFuncionario } from "@/hooks/useFuncionario";
-import { signOut } from "@/lib/auth";
-import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 import {
   ChefHat,
-  Home,
-  Users,
-  UtensilsCrossed,
-  Package,
-  BarChart3,
-  Settings,
-  LogOut,
-  Menu,
   X,
   Coffee,
-  CreditCard,
+  UtensilsCrossed,
+  DollarSign,
+  BarChart3,
+  Package,
+  Settings,
+  Users,
+  LogOut,
   Clock,
-  ShoppingCart,
-  AlertTriangle
+  ShoppingCart
 } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { signOut } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -32,7 +28,6 @@ interface SidebarProps {
 
 const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
   const { user } = useAuth();
-  const { funcionario } = useFuncionario();
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -42,99 +37,139 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
       await signOut();
       toast({
         title: "Logout realizado",
-        description: "Você foi desconectado com sucesso."
+        description: "Você foi desconectado com sucesso.",
+        variant: "default"
       });
-      navigate("/");
+      navigate("/login");
     } catch (error) {
-      console.error("Erro no logout:", error);
+      console.error("Erro ao fazer logout:", error);
       toast({
         title: "Erro",
-        description: "Erro ao fazer logout.",
+        description: "Erro ao fazer logout. Tente novamente.",
         variant: "destructive"
       });
     }
   };
 
-  const menuItems = [
-    {
-      title: "Dashboard",
-      icon: Home,
-      href: "/dashboard",
-      roles: ["administrador", "garcom", "caixa", "estoque", "cozinha"]
-    },
-    {
-      title: "Mesas",
-      icon: Coffee,
-      href: "/mesas",
-      roles: ["administrador", "garcom"]
-    },
-    {
-      title: "Comandas",
-      icon: UtensilsCrossed,
-      href: "/comandas",
-      roles: ["administrador", "garcom", "caixa"]
-    },
-    {
-      title: "Cozinha",
-      icon: ChefHat,
-      href: "/cozinha",
-      roles: ["administrador", "cozinha"]
-    },
-    {
-      title: "PDV",
-      icon: CreditCard,
-      href: "/pdv",
-      roles: ["administrador", "caixa"]
-    },
-    {
-      title: "Produtos",
-      icon: ShoppingCart,
-      href: "/produtos",
-      roles: ["administrador"]
-    },
-    {
-      title: "Estoque",
-      icon: Package,
-      href: "/estoque",
-      roles: ["administrador", "estoque"]
-    },
-    {
-      title: "Turnos",
-      icon: Clock,
-      href: "/turnos",
-      roles: ["administrador", "caixa"]
-    },
-    {
-      title: "Relatórios",
-      icon: BarChart3,
-      href: "/relatorios",
-      roles: ["administrador"]
-    },
-    {
-      title: "Funcionários",
-      icon: Users,
-      href: "/gerenciar-funcionarios",
-      roles: ["administrador"]
-    },
-    {
-      title: "Configurações",
-      icon: Settings,
-      href: "/configuracoes",
-      roles: ["administrador"]
+  const isActive = (path: string) => location.pathname === path;
+
+  const getNavigationItems = () => {
+    if (!user) return [];
+
+    const baseItems = [
+      {
+        title: "Dashboard",
+        href: "/dashboard",
+        icon: ChefHat,
+        roles: [
+          "admin",
+          "administrador",
+          "garcom",
+          "caixa",
+          "estoque",
+          "cozinha"
+        ]
+      },
+      {
+        title: "Mesas",
+        href: "/mesas",
+        icon: Coffee,
+        roles: ["admin", "administrador", "garcom"]
+      },
+      {
+        title: "Comandas",
+        href: "/comandas",
+        icon: UtensilsCrossed,
+        roles: ["admin", "administrador", "garcom", "caixa"]
+      },
+      {
+        title: "PDV",
+        href: "/pdv",
+        icon: DollarSign,
+        roles: ["admin", "administrador", "caixa"]
+      },
+      {
+        title: "Cozinha",
+        href: "/cozinha",
+        icon: ChefHat,
+        roles: ["admin", "administrador", "cozinha"]
+      },
+      {
+        title: "Produtos",
+        href: "/produtos",
+        icon: ShoppingCart,
+        roles: ["admin", "administrador", "estoque"]
+      },
+      {
+        title: "Estoque",
+        href: "/estoque",
+        icon: Package,
+        roles: ["admin", "administrador", "estoque"]
+      },
+      {
+        title: "Turnos",
+        href: "/turnos",
+        icon: Clock,
+        roles: ["admin", "administrador", "caixa"]
+      },
+      {
+        title: "Relatórios",
+        href: "/relatorios",
+        icon: BarChart3,
+        roles: ["admin", "administrador", "caixa", "estoque"]
+      }
+    ];
+
+    // Se for administrador, adicionar itens administrativos
+    if (user.tipo === "admin") {
+      baseItems.push(
+        {
+          title: "Funcionários",
+          href: "/funcionarios",
+          icon: Users,
+          roles: ["admin"]
+        },
+        {
+          title: "Gerenciar Funcionários",
+          href: "/gerenciar-funcionarios",
+          icon: Users,
+          roles: ["admin"]
+        },
+        {
+          title: "Configurações",
+          href: "/configuracoes",
+          icon: Settings,
+          roles: ["admin"]
+        }
+      );
+    } else if (user.tipo === "funcionario") {
+      const funcionarioData = user.userData as any;
+      if (funcionarioData?.tipo === "administrador") {
+        baseItems.push(
+          {
+            title: "Gerenciar Funcionários",
+            href: "/gerenciar-funcionarios",
+            icon: Users,
+            roles: ["administrador"]
+          },
+          {
+            title: "Configurações",
+            href: "/configuracoes",
+            icon: Settings,
+            roles: ["administrador"]
+          }
+        );
+      }
     }
-  ];
 
-  const filteredMenuItems = menuItems.filter(
-    (item) => 
-      (user && item.roles.includes(user.tipo)) ||
-      (funcionario && item.roles.includes(funcionario.tipo))
-  );
+    return baseItems;
+  };
 
-  const isActive = (href: string) => location.pathname === href;
+  const navigationItems = getNavigationItems();
 
   return (
     <>
-      {/* Mobile overlay */}
+      {/* Overlay para mobile */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
@@ -144,11 +179,9 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
 
       {/* Sidebar */}
       <div
-        className={`
-        fixed top-0 left-0 h-full w-64 bg-card border-r border-border z-50 transform transition-transform duration-300 ease-in-out
-        ${isOpen ? "translate-x-0" : "-translate-x-full"}
-        lg:static lg:translate-x-0 lg:z-auto lg:flex-shrink-0 lg:w-64
-      `}
+        className={`fixed left-0 top-0 z-50 h-full w-64 bg-card border-r border-border transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:z-auto ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
       >
         <div className="flex flex-col h-full">
           {/* Header */}
@@ -174,15 +207,15 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
                 <span className="text-primary font-semibold">
-                  {(user?.nome_completo || funcionario?.nome || 'U').charAt(0).toUpperCase()}
+                  {user?.nome.charAt(0).toUpperCase()}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">
-                  {user?.nome_completo || funcionario?.nome || 'Usuário'}
-                </p>
+                <p className="text-sm font-medium truncate">{user?.nome}</p>
                 <p className="text-xs text-muted-foreground capitalize">
-                  {funcionario?.tipo || 'Usuário'}
+                  {user?.tipo === "admin"
+                    ? "Administrador"
+                    : (user?.userData as any)?.tipo || "Usuário"}
                 </p>
               </div>
             </div>
@@ -190,29 +223,30 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
 
           {/* Navigation */}
           <ScrollArea className="flex-1 px-3 py-4">
-            <nav className="space-y-1">
-              {filteredMenuItems.map((item) => (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  onClick={() => {
-                    if (window.innerWidth < 1024) {
-                      onToggle();
-                    }
-                  }}
-                  className={`
-                    flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
-                    ${
+            <nav className="space-y-2">
+              {navigationItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    to={item.href}
+                    className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       isActive(item.href)
                         ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                    }
-                  `}
-                >
-                  <item.icon className="h-4 w-4" />
-                  <span>{item.title}</span>
-                </Link>
-              ))}
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                    onClick={() => {
+                      // Fechar sidebar no mobile após clicar
+                      if (window.innerWidth < 1024) {
+                        onToggle();
+                      }
+                    }}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{item.title}</span>
+                  </Link>
+                );
+              })}
             </nav>
           </ScrollArea>
 
@@ -220,8 +254,8 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
           <div className="p-4 border-t border-border">
             <Button
               variant="ghost"
-              onClick={handleLogout}
               className="w-full justify-start text-muted-foreground hover:text-foreground"
+              onClick={handleLogout}
             >
               <LogOut className="h-4 w-4 mr-3" />
               Sair

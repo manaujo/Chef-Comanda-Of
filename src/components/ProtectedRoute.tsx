@@ -1,29 +1,75 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import type { UserType } from "@/types/database";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  allowedRoles?: UserType[];
+  requireAdmin?: boolean;
 }
 
-const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, isLoading, isAuthenticated } = useAuth();
+const ProtectedRoute = ({
+  children,
+  allowedRoles,
+  requireAdmin = false
+}: ProtectedRouteProps) => {
+  const { user, isLoading, isAuthenticated, isAdmin, isFuncionario } =
+    useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     console.log("🛡️ ProtectedRoute - Estado:", {
       isLoading,
       isAuthenticated,
-      hasUser: !!user
+      hasUser: !!user,
+      tipo: user?.tipo,
+      isAdmin,
+      isFuncionario,
+      requireAdmin,
+      allowedRoles
     });
 
     if (!isLoading && !isAuthenticated) {
       console.log("🚫 Usuário não autenticado, redirecionando para login");
       navigate("/login");
     } else if (!isLoading && isAuthenticated) {
-      console.log("✅ Usuário autenticado, permitindo acesso ao dashboard");
+      // Verificar se requer administrador
+      if (requireAdmin && !isAdmin) {
+        console.log(
+          "🚫 Acesso restrito a administradores, redirecionando para acesso negado"
+        );
+        navigate("/acesso-negado");
+        return;
+      }
+
+      // Verificar permissões específicas para funcionários
+      if (isFuncionario && allowedRoles) {
+        const funcionarioData = user?.userData as any;
+        if (
+          !funcionarioData?.tipo ||
+          !allowedRoles.includes(funcionarioData.tipo)
+        ) {
+          console.log(
+            "🚫 Funcionário sem permissão, redirecionando para acesso negado"
+          );
+          navigate("/acesso-negado");
+          return;
+        }
+      }
+
+      console.log("✅ Usuário autenticado e com permissão, permitindo acesso");
     }
-  }, [isLoading, isAuthenticated, navigate, user]);
+  }, [
+    isLoading,
+    isAuthenticated,
+    navigate,
+    user,
+    isAdmin,
+    isFuncionario,
+    requireAdmin,
+    allowedRoles
+  ]);
 
   if (isLoading) {
     console.log("⏳ ProtectedRoute - Carregando...");
@@ -46,6 +92,35 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         </div>
       </div>
     );
+  }
+
+  // Verificar permissões específicas
+  if (requireAdmin && !isAdmin) {
+    console.log("❌ ProtectedRoute - Acesso restrito a administradores");
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground">Redirecionando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isFuncionario && allowedRoles) {
+    const funcionarioData = user?.userData as any;
+    if (
+      !funcionarioData?.tipo ||
+      !allowedRoles.includes(funcionarioData.tipo)
+    ) {
+      console.log("❌ ProtectedRoute - Funcionário sem permissão");
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-muted-foreground">Redirecionando...</p>
+          </div>
+        </div>
+      );
+    }
   }
 
   console.log("✅ ProtectedRoute - Renderizando conteúdo protegido");

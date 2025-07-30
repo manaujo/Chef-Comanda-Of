@@ -9,52 +9,118 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChefHat, LogIn, Eye, EyeOff } from "lucide-react";
+import { ChefHat, LogIn, Eye, EyeOff, User, Users } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { authFuncionarios } from "@/lib/funcionarios";
+import { funcionariosService } from "@/lib/funcionarios";
 import { signIn } from "@/lib/auth";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [loginType, setLoginType] = useState<"admin" | "funcionario">("admin");
   const [email, setEmail] = useState("");
+  const [cpf, setCpf] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // Máscara de CPF
+  const formatCPF = (value: string) => {
+    return value
+      .replace(/\D/g, "")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})/, "$1-$2")
+      .replace(/(-\d{2})\d+?$/, "$1");
+  };
+
+  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCPF(e.target.value);
+    setCpf(formatted);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("🚀 Iniciando processo de login...");
     setIsLoading(true);
 
     try {
-      console.log("📧 Tentando fazer login com email:", email);
-      const result = await signIn(email, password);
-      console.log("✅ Login bem-sucedido:", result);
-
-      toast({
-        title: "Login realizado com sucesso!",
-        description: "Bem-vindo ao ChefComanda.",
-        variant: "default"
-      });
-
-      console.log("⏳ Aguardando 1 segundo antes do redirecionamento...");
-      // Pequeno delay para garantir que o estado seja atualizado
-      setTimeout(() => {
-        console.log("🔄 Redirecionando para /dashboard...");
+      if (loginType === "admin") {
+        // Login de administrador com email e senha
+        await signIn(email, password);
+        toast({
+          title: "Login realizado com sucesso!",
+          description: "Bem-vindo ao sistema",
+          variant: "default"
+        });
         navigate("/dashboard");
-      }, 1000);
+      } else {
+        // Login de funcionário com CPF e senha
+        const cpfLimpo = cpf.replace(/\D/g, "");
+        if (cpfLimpo.length !== 11) {
+          throw new Error("CPF deve ter 11 dígitos");
+        }
+
+        // Login no Supabase Auth
+        await authFuncionarios.signInWithCpf(cpfLimpo, password);
+
+        // Buscar dados do funcionário
+        const funcionario = await funcionariosService.getByCpf(cpfLimpo);
+        if (!funcionario) throw new Error("Usuário não encontrado");
+        if (!funcionario.ativo) throw new Error("Usuário inativo");
+
+        // Redirecionamento por tipo
+        switch (funcionario.tipo) {
+          case "administrador":
+            navigate("/dashboard");
+            break;
+          case "garcom":
+            navigate("/mesas");
+            break;
+          case "caixa":
+            navigate("/pdv");
+            break;
+          case "cozinha":
+            navigate("/cozinha");
+            break;
+          case "estoque":
+            navigate("/produtos");
+            break;
+          default:
+            navigate("/dashboard");
+        }
+
+        toast({
+          title: "Login realizado com sucesso!",
+          description: `Bem-vindo, ${funcionario.nome}`,
+          variant: "default"
+        });
+      }
     } catch (error: any) {
-      console.error("💥 Erro no login:", error);
+      let errorMessage = "Credenciais incorretas.";
 
-      let errorMessage = "Email ou senha incorretos.";
-
-      if (error.message?.includes("Invalid login credentials")) {
-        errorMessage = "Email ou senha incorretos.";
-      } else if (error.message?.includes("Email not confirmed")) {
-        errorMessage = "Por favor, confirme seu email antes de fazer login.";
-      } else if (error.message?.includes("Too many requests")) {
-        errorMessage = "Muitas tentativas. Tente novamente em alguns minutos.";
+      if (loginType === "admin") {
+        if (error.message?.includes("Invalid login credentials")) {
+          errorMessage = "Email ou senha incorretos.";
+        } else if (error.message?.includes("Email not confirmed")) {
+          errorMessage =
+            "Email não confirmado. Verifique sua caixa de entrada.";
+        }
+      } else {
+        if (error.message?.includes("inativo")) {
+          errorMessage = "Usuário inativo";
+        } else if (error.message?.includes("11 dígitos")) {
+          errorMessage = "CPF deve ter 11 dígitos.";
+        } else if (
+          error.message?.includes("not found") ||
+          error.message?.includes("não encontrado")
+        ) {
+          errorMessage = "Usuário não encontrado.";
+        } else if (error.message?.includes("Too many requests")) {
+          errorMessage =
+            "Muitas tentativas. Tente novamente em alguns minutos.";
+        }
       }
 
       toast({
@@ -81,23 +147,62 @@ const Login = () => {
               ChefComanda
             </CardTitle>
             <CardDescription>
-              Entre com seu email e senha para acessar o sistema
+              Acesse o sistema com suas credenciais
             </CardDescription>
           </CardHeader>
 
           <CardContent>
+            {/* Seletor de tipo de login */}
+            <div className="flex rounded-lg border border-border p-1 mb-6">
+              <Button
+                type="button"
+                variant={loginType === "admin" ? "default" : "ghost"}
+                size="sm"
+                className="flex-1"
+                onClick={() => setLoginType("admin")}
+              >
+                <User className="h-4 w-4 mr-2" />
+                Administrador
+              </Button>
+              <Button
+                type="button"
+                variant={loginType === "funcionario" ? "default" : "ghost"}
+                size="sm"
+                className="flex-1"
+                onClick={() => setLoginType("funcionario")}
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Funcionário
+              </Button>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
+              {loginType === "admin" ? (
+                <div className="space-y-2">
+                  <Label htmlFor="email">E-mail</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="cpf">CPF</Label>
+                  <Input
+                    id="cpf"
+                    type="text"
+                    placeholder="000.000.000-00"
+                    value={cpf}
+                    onChange={handleCpfChange}
+                    maxLength={14}
+                    required
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="password">Senha</Label>
@@ -150,14 +255,6 @@ const Login = () => {
               >
                 Esqueci minha senha
               </Link>
-
-              <div className="text-sm text-muted-foreground">
-                Não tem uma conta?{" "}
-                <Link to="/registro" className="text-primary hover:underline">
-                  Criar conta
-                </Link>
-              </div>
-
               <div className="pt-4 border-t border-border">
                 <Link
                   to="/"

@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
-import LoginFuncionario from "./pages/LoginFuncionario";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Mesas from "./pages/Mesas";
@@ -23,7 +22,6 @@ import Configuracoes from "./pages/Configuracoes";
 import AcessoNegado from "./pages/AcessoNegado";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
-import ProtectedRouteFuncionario from "./components/ProtectedRouteFuncionario";
 
 const queryClient = new QueryClient();
 
@@ -36,87 +34,98 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/login-funcionario" element={<LoginFuncionario />} />
           <Route path="/registro" element={<Register />} />
           <Route path="/acesso-negado" element={<AcessoNegado />} />
           <Route
             path="/dashboard"
             element={
-              <ProtectedRouteFuncionario allowedRoles={['administrador', 'garcom', 'caixa', 'estoque', 'cozinha']}>
+              <ProtectedRoute
+                allowedRoles={[
+                  "administrador",
+                  "garcom",
+                  "caixa",
+                  "estoque",
+                  "cozinha"
+                ]}
+              >
                 <Dashboard />
-              </ProtectedRouteFuncionario>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/mesas"
             element={
-              <ProtectedRouteFuncionario allowedRoles={['administrador', 'garcom']}>
+              <ProtectedRoute allowedRoles={["administrador", "garcom"]}>
                 <Mesas />
-              </ProtectedRouteFuncionario>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/mesa/:id"
             element={
-              <ProtectedRouteFuncionario allowedRoles={['administrador', 'garcom']}>
+              <ProtectedRoute allowedRoles={["administrador", "garcom"]}>
                 <MesaDetalhes />
-              </ProtectedRouteFuncionario>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/comandas"
             element={
-              <ProtectedRouteFuncionario allowedRoles={['administrador', 'garcom', 'caixa']}>
+              <ProtectedRoute
+                allowedRoles={["administrador", "garcom", "caixa"]}
+              >
                 <Comandas />
-              </ProtectedRouteFuncionario>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/cozinha"
             element={
-              <ProtectedRouteFuncionario allowedRoles={['administrador', 'cozinha']}>
+              <ProtectedRoute allowedRoles={["administrador", "cozinha"]}>
                 <Cozinha />
-              </ProtectedRouteFuncionario>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/pdv"
             element={
-              <ProtectedRouteFuncionario allowedRoles={['administrador', 'caixa']}>
+              <ProtectedRoute allowedRoles={["administrador", "caixa"]}>
                 <PDV />
-              </ProtectedRouteFuncionario>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/produtos"
             element={
-              <ProtectedRouteFuncionario allowedRoles={['administrador', 'estoque']}>
+              <ProtectedRoute allowedRoles={["administrador", "estoque"]}>
                 <Produtos />
-              </ProtectedRouteFuncionario>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/estoque"
             element={
-              <ProtectedRouteFuncionario allowedRoles={['administrador', 'estoque']}>
+              <ProtectedRoute allowedRoles={["administrador", "estoque"]}>
                 <Estoque />
-              </ProtectedRouteFuncionario>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/turnos"
             element={
-              <ProtectedRouteFuncionario allowedRoles={['administrador', 'caixa']}>
+              <ProtectedRoute allowedRoles={["administrador", "caixa"]}>
                 <Turnos />
-              </ProtectedRouteFuncionario>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/relatorios"
             element={
-              <ProtectedRouteFuncionario allowedRoles={['administrador', 'caixa', 'estoque']}>
+              <ProtectedRoute
+                allowedRoles={["administrador", "caixa", "estoque"]}
+              >
                 <Relatorios />
-              </ProtectedRouteFuncionario>
+              </ProtectedRoute>
             }
           />
           <Route
@@ -130,17 +139,17 @@ const App = () => (
           <Route
             path="/gerenciar-funcionarios"
             element={
-              <ProtectedRouteFuncionario allowedRoles={['administrador']}>
+              <ProtectedRoute requireAdmin={true}>
                 <GerenciarFuncionarios />
-              </ProtectedRouteFuncionario>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/configuracoes"
             element={
-              <ProtectedRouteFuncionario allowedRoles={['administrador']}>
+              <ProtectedRoute requireAdmin={true}>
                 <Configuracoes />
-              </ProtectedRouteFuncionario>
+              </ProtectedRoute>
             }
           />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

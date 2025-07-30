@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useFuncionario } from "@/hooks/useFuncionario";
+
 import {
   Coffee,
   Plus,
@@ -35,13 +35,18 @@ import {
   produtosService,
   subscribeToTable
 } from "@/lib/database";
-import type { Mesa, Comanda, Produto, ComandaItem, CategoriaProduto } from "@/types/database";
+import type {
+  Mesa,
+  Comanda,
+  Produto,
+  ComandaItem,
+  CategoriaProduto
+} from "@/types/database";
 
 const MesaDetalhes = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { funcionario } = useFuncionario();
   const { toast } = useToast();
 
   const [mesa, setMesa] = useState<Mesa | null>(null);
@@ -49,7 +54,9 @@ const MesaDetalhes = () => {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
+  const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(
+    null
+  );
   const [quantidade, setQuantidade] = useState(1);
   const [observacoes, setObservacoes] = useState("");
 
@@ -71,7 +78,7 @@ const MesaDetalhes = () => {
 
     // Subscrever a mudanças na comanda
     const unsubscribeComandas = subscribeToTable(
-      'comandas',
+      "comandas",
       () => {
         loadComandaData();
       },
@@ -79,12 +86,9 @@ const MesaDetalhes = () => {
     );
 
     // Subscrever a mudanças nos itens da comanda
-    const unsubscribeItens = subscribeToTable(
-      'comanda_itens',
-      () => {
-        loadComandaData();
-      }
-    );
+    const unsubscribeItens = subscribeToTable("comanda_itens", () => {
+      loadComandaData();
+    });
 
     return () => {
       unsubscribeComandas();
@@ -104,7 +108,7 @@ const MesaDetalhes = () => {
 
       setMesa(mesaData);
       setProdutos(produtosData);
-      
+
       // Carregar comanda se existir
       await loadComandaData();
     } catch (error) {
@@ -218,9 +222,9 @@ const MesaDetalhes = () => {
     }
   };
 
-  const produtosPorCategoria = categorias.map(categoria => ({
+  const produtosPorCategoria = categorias.map((categoria) => ({
     ...categoria,
-    produtos: produtos.filter(p => p.categoria_produto === categoria.key)
+    produtos: produtos.filter((p) => p.categoria_produto === categoria.key)
   }));
 
   if (loading) {
@@ -292,9 +296,7 @@ const MesaDetalhes = () => {
               {mesa.status === "manutencao" && "Manutenção"}
             </Badge>
             {comanda && (
-              <Badge variant="outline">
-                Comanda #{comanda.numero}
-              </Badge>
+              <Badge variant="outline">Comanda #{comanda.numero}</Badge>
             )}
           </div>
         </div>
@@ -334,7 +336,8 @@ const MesaDetalhes = () => {
                       <div className="flex items-center space-x-3">
                         <div className="text-right">
                           <div className="font-bold">
-                          R$ {(item.quantidade * item.preco_unitario).toFixed(2)}
+                            R${" "}
+                            {(item.quantidade * item.preco_unitario).toFixed(2)}
                           </div>
                         </div>
                         <Badge variant={getStatusColor(item.status)}>
@@ -366,7 +369,7 @@ const MesaDetalhes = () => {
                 <categoria.icon className="h-5 w-5" />
                 <span>{categoria.label}</span>
               </h2>
-              
+
               {categoria.produtos.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {categoria.produtos.map((produto) => (
@@ -388,7 +391,9 @@ const MesaDetalhes = () => {
                             />
                           </div>
                         )}
-                        <CardTitle className="text-lg">{produto.nome}</CardTitle>
+                        <CardTitle className="text-lg">
+                          {produto.nome}
+                        </CardTitle>
                         {produto.descricao && (
                           <p className="text-sm text-muted-foreground line-clamp-2">
                             {produto.descricao}
@@ -427,16 +432,17 @@ const MesaDetalhes = () => {
         </div>
 
         {/* Verificar permissões para mostrar aviso */}
-        {(user?.tipo !== 'administrador' && user?.tipo !== 'garcom') &&
-         (funcionario?.tipo !== 'administrador' && funcionario?.tipo !== 'garcom') && (
-          <Card className="bg-yellow-50 border-yellow-200">
-            <CardContent className="p-4 text-center">
-              <p className="text-yellow-800">
-                Apenas garçons podem adicionar itens às comandas.
-              </p>
-            </CardContent>
-          </Card>
-        )}
+        {user?.tipo === "funcionario" &&
+          (user?.userData as any)?.tipo !== "administrador" &&
+          (user?.userData as any)?.tipo !== "garcom" && (
+            <Card className="bg-yellow-50 border-yellow-200">
+              <CardContent className="p-4 text-center">
+                <p className="text-yellow-800">
+                  Apenas garçons podem adicionar itens às comandas.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
         {/* Dialog para Adicionar Item */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -481,7 +487,9 @@ const MesaDetalhes = () => {
                       type="number"
                       min="1"
                       value={quantidade}
-                      onChange={(e) => setQuantidade(parseInt(e.target.value) || 1)}
+                      onChange={(e) =>
+                        setQuantidade(parseInt(e.target.value) || 1)
+                      }
                       className="w-20 text-center"
                     />
                     <Button
@@ -522,11 +530,12 @@ const MesaDetalhes = () => {
                   >
                     Cancelar
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleAdicionarItem}
                     disabled={
-                      (user?.tipo !== 'administrador' && user?.tipo !== 'garcom') &&
-                      (funcionario?.tipo !== 'administrador' && funcionario?.tipo !== 'garcom')
+                      user?.tipo === "funcionario" &&
+                      (user?.userData as any)?.tipo !== "administrador" &&
+                      (user?.userData as any)?.tipo !== "garcom"
                     }
                   >
                     <ShoppingCart className="h-4 w-4 mr-2" />

@@ -33,11 +33,10 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { comandasService, mesasService, produtosService } from "@/lib/database";
 import type { Comanda, Mesa, Produto } from "@/types/database";
 import { useAuth } from "@/hooks/useAuth";
-import { useFuncionario } from "@/hooks/useFuncionario";
 
 const Comandas = () => {
   const { user } = useAuth();
-  const { funcionario } = useFuncionario();
+
   const [comandas, setComandasAbertas] = useState<Comanda[]>([]);
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -260,11 +259,12 @@ const Comandas = () => {
                   >
                     Cancelar
                   </Button>
-                  <Button 
+                  <Button
                     type="submit"
                     disabled={
-                      (user?.tipo !== 'administrador' && user?.tipo !== 'garcom') &&
-                      (funcionario?.tipo !== 'administrador' && funcionario?.tipo !== 'garcom')
+                      user?.tipo === "funcionario" &&
+                      (user?.userData as any)?.tipo !== "administrador" &&
+                      (user?.userData as any)?.tipo !== "garcom"
                     }
                   >
                     {editingComanda ? "Atualizar" : "Criar"}
@@ -367,12 +367,21 @@ const Comandas = () => {
                 {/* Itens da Comanda */}
                 {comanda.itens && comanda.itens.length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="text-sm font-medium text-muted-foreground">Itens:</h4>
+                    <h4 className="text-sm font-medium text-muted-foreground">
+                      Itens:
+                    </h4>
                     {comanda.itens.map((item) => (
-                      <div key={item.id} className="flex items-center justify-between text-sm bg-muted/50 p-2 rounded">
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between text-sm bg-muted/50 p-2 rounded"
+                      >
                         <div className="flex-1">
-                          <span className="font-medium">{item.produto?.nome}</span>
-                          <span className="text-muted-foreground ml-1">({item.quantidade}x)</span>
+                          <span className="font-medium">
+                            {item.produto?.nome}
+                          </span>
+                          <span className="text-muted-foreground ml-1">
+                            ({item.quantidade}x)
+                          </span>
                           {item.observacoes && (
                             <div className="text-xs text-muted-foreground">
                               Obs: {item.observacoes}
@@ -381,7 +390,8 @@ const Comandas = () => {
                         </div>
                         <div className="text-right">
                           <div className="font-medium">
-                            R$ {(item.quantidade * item.preco_unitario).toFixed(2)}
+                            R${" "}
+                            {(item.quantidade * item.preco_unitario).toFixed(2)}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             R$ {item.preco_unitario.toFixed(2)} cada
@@ -409,9 +419,7 @@ const Comandas = () => {
                 {comanda.garcom && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Garçom:</span>
-                    <span className="font-medium">
-                      {comanda.garcom.nome_completo}
-                    </span>
+                    <span className="font-medium">{comanda.garcom.nome}</span>
                   </div>
                 )}
 

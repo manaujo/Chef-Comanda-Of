@@ -2,11 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShieldX, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useFuncionario } from "@/hooks/useFuncionario";
 
 const AcessoNegado = () => {
-  const { funcionario } = useFuncionario();
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-primary/5 p-4">
       <div className="w-full max-w-md">
@@ -26,17 +23,6 @@ const AcessoNegado = () => {
             <p className="text-muted-foreground">
               Você não tem permissão para acessar esta página.
             </p>
-            
-            {funcionario && (
-              <div className="bg-muted p-4 rounded-lg">
-                <p className="text-sm">
-                  <strong>Usuário:</strong> {funcionario.nome}
-                </p>
-                <p className="text-sm">
-                  <strong>Tipo:</strong> {funcionario.tipo}
-                </p>
-              </div>
-            )}
 
             <div className="space-y-2">
               <Button asChild className="w-full">
@@ -45,11 +31,9 @@ const AcessoNegado = () => {
                   Voltar ao Dashboard
                 </Link>
               </Button>
-              
+
               <Button variant="outline" asChild className="w-full">
-                <Link to="/login-funcionario">
-                  Fazer Login Novamente
-                </Link>
+                <Link to="/login">Fazer Login Novamente</Link>
               </Button>
             </div>
           </CardContent>

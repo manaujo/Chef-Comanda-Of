@@ -47,8 +47,8 @@ CREATE POLICY "Administrators can manage funcionarios"
   TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM funcionarios f 
-      WHERE f.user_id = auth.uid() AND f.tipo = 'administrador'
+      SELECT 1 FROM profiles p 
+      WHERE p.id = auth.uid() AND p.tipo = 'administrador' AND p.ativo = true
     )
   );
 
@@ -68,13 +68,13 @@ EXCEPTION
   WHEN duplicate_object THEN null;
 END $$;
 
--- Função para verificar se usuário é administrador (usando tabela funcionarios)
+-- Função para verificar se usuário é administrador (usando tabela profiles)
 CREATE OR REPLACE FUNCTION is_admin_funcionario()
 RETURNS BOOLEAN AS $$
 BEGIN
   RETURN EXISTS (
-    SELECT 1 FROM funcionarios 
-    WHERE user_id = auth.uid() AND tipo = 'administrador' AND ativo = true
+    SELECT 1 FROM profiles 
+    WHERE id = auth.uid() AND tipo = 'administrador' AND ativo = true
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

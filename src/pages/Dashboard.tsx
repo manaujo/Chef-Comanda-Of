@@ -118,10 +118,13 @@ const Dashboard = () => {
               Dashboard
             </h1>
             <p className="text-sm sm:text-base lg:text-lg text-muted-foreground mt-1">
-              Bem-vindo, {user?.nome_completo}!
+              Bem-vindo, {user?.nome}!
             </p>
             <p className="text-xs sm:text-sm lg:text-base text-muted-foreground">
-              {user?.nome_restaurante} •{" "}
+              {user?.tipo === "admin"
+                ? (user?.userData as any)?.nome_restaurante
+                : "Restaurante"}{" "}
+              •{" "}
               {new Date().toLocaleDateString("pt-BR", {
                 weekday: "long",
                 year: "numeric",

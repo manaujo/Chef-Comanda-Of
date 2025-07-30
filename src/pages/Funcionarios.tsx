@@ -48,7 +48,8 @@ const Funcionarios = () => {
   });
 
   // Check if user is admin
-  const isAdmin = user?.tipo === 'administrador';
+  const isAdmin =
+    user?.tipo === "admin" || (user?.userData as any)?.tipo === "administrador";
 
   useEffect(() => {
     loadFuncionarios();
@@ -78,14 +79,14 @@ const Funcionarios = () => {
     if (!isAdmin) {
       toast({
         title: "Acesso negado",
-        description: "Apenas administradores podem criar ou editar funcionários.",
+        description:
+          "Apenas administradores podem criar ou editar funcionários.",
         variant: "destructive"
       });
       return;
     }
 
     try {
-
       if (editingFuncionario) {
         const funcionarioData = {
           nome_completo: formData.nome_completo,
@@ -94,7 +95,7 @@ const Funcionarios = () => {
           tipo: formData.tipo,
           ativo: formData.ativo
         };
-        
+
         await profilesService.update(editingFuncionario.id, funcionarioData);
         toast({
           title: "Funcionário atualizado",
@@ -130,7 +131,7 @@ const Funcionarios = () => {
           telefone: formData.telefone.replace(/\D/g, ""),
           tipo: formData.tipo
         });
-        
+
         toast({
           title: "Funcionário criado",
           description: "Funcionário criado com sucesso."
@@ -142,19 +143,21 @@ const Funcionarios = () => {
       loadFuncionarios();
     } catch (error: any) {
       console.error("Erro ao salvar funcionário:", error);
-      
+
       let errorMessage = "Erro ao salvar funcionário.";
-      
+
       if (error.message?.includes("User already registered")) {
         errorMessage = "Este email já está cadastrado.";
       } else if (error.message?.includes("Invalid email")) {
         errorMessage = "Email inválido.";
-      } else if (error.message?.includes("Password should be at least 6 characters")) {
+      } else if (
+        error.message?.includes("Password should be at least 6 characters")
+      ) {
         errorMessage = "A senha deve ter pelo menos 6 caracteres.";
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       toast({
         title: "Erro",
         description: errorMessage,
@@ -171,7 +174,9 @@ const Funcionarios = () => {
       telefone: funcionario.telefone,
       cpf: funcionario.cpf,
       tipo: funcionario.tipo,
-      ativo: funcionario.ativo
+      ativo: funcionario.ativo,
+      password: "",
+      confirmPassword: ""
     });
     setDialogOpen(true);
   };
@@ -181,7 +186,8 @@ const Funcionarios = () => {
     if (!isAdmin) {
       toast({
         title: "Acesso negado",
-        description: "Apenas administradores podem alterar o status de funcionários.",
+        description:
+          "Apenas administradores podem alterar o status de funcionários.",
         variant: "destructive"
       });
       return;
@@ -214,7 +220,7 @@ const Funcionarios = () => {
       email: "",
       telefone: "",
       cpf: "",
-      tipo: "garcom",
+      tipo: "garcom" as UserType,
       ativo: true,
       password: "",
       confirmPassword: ""
@@ -303,8 +309,11 @@ const Funcionarios = () => {
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button 
-                onClick={resetForm} 
+              <Button
+                onClick={() => {
+                  resetForm();
+                  setDialogOpen(true);
+                }}
                 className="flex-shrink-0"
                 disabled={!isAdmin}
               >
@@ -411,7 +420,10 @@ const Funcionarios = () => {
                         type="password"
                         value={formData.confirmPassword}
                         onChange={(e) =>
-                          setFormData({ ...formData, confirmPassword: e.target.value })
+                          setFormData({
+                            ...formData,
+                            confirmPassword: e.target.value
+                          })
                         }
                         required={!editingFuncionario}
                         minLength={6}
@@ -581,7 +593,10 @@ const Funcionarios = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleEdit(funcionario)}
+                    onClick={() => {
+                      handleEdit(funcionario);
+                      setDialogOpen(true);
+                    }}
                     className="flex-1"
                     disabled={!isAdmin}
                   >
@@ -617,8 +632,11 @@ const Funcionarios = () => {
               <p className="text-muted-foreground mb-4">
                 Comece cadastrando os funcionários do seu restaurante.
               </p>
-              <Button 
-                onClick={() => setDialogOpen(true)}
+              <Button
+                onClick={() => {
+                  resetForm();
+                  setDialogOpen(true);
+                }}
                 disabled={!isAdmin}
               >
                 <Plus className="h-4 w-4 mr-2" />

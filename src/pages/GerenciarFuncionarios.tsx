@@ -22,15 +22,17 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Users, UserCheck, UserX } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { funcionariosService, type Funcionario } from "@/lib/funcionarios";
-import { useFuncionario } from "@/hooks/useFuncionario";
+import { useAuth } from "@/hooks/useAuth";
+
 import type { UserType } from "@/types/database";
 
 const GerenciarFuncionarios = () => {
-  const { funcionario: currentUser, isAdmin } = useFuncionario();
+  const { user } = useAuth();
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingFuncionario, setEditingFuncionario] = useState<Funcionario | null>(null);
+  const [editingFuncionario, setEditingFuncionario] =
+    useState<Funcionario | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -42,10 +44,8 @@ const GerenciarFuncionarios = () => {
   });
 
   useEffect(() => {
-    if (isAdmin) {
-      loadFuncionarios();
-    }
-  }, [isAdmin]);
+    loadFuncionarios();
+  }, [user]);
 
   const loadFuncionarios = async () => {
     try {
@@ -76,6 +76,10 @@ const GerenciarFuncionarios = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const isAdmin =
+      user?.tipo === "admin" ||
+      (user?.userData as any)?.tipo === "administrador";
+
     if (!isAdmin) {
       toast({
         title: "Acesso negado",
@@ -92,7 +96,7 @@ const GerenciarFuncionarios = () => {
           nome: formData.nome,
           tipo: formData.tipo
         });
-        
+
         toast({
           title: "Funcionário atualizado",
           description: "Funcionário atualizado com sucesso."
@@ -134,7 +138,7 @@ const GerenciarFuncionarios = () => {
           senha: formData.senha,
           tipo: formData.tipo
         });
-        
+
         toast({
           title: "Funcionário criado",
           description: "Funcionário criado com sucesso."
@@ -146,9 +150,9 @@ const GerenciarFuncionarios = () => {
       loadFuncionarios();
     } catch (error: any) {
       console.error("Erro ao salvar funcionário:", error);
-      
+
       let errorMessage = "Erro ao salvar funcionário.";
-      
+
       if (error.message?.includes("CPF já cadastrado")) {
         errorMessage = "Este CPF já está cadastrado.";
       } else if (error.message?.includes("User already registered")) {
@@ -156,7 +160,7 @@ const GerenciarFuncionarios = () => {
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       toast({
         title: "Erro",
         description: errorMessage,
@@ -178,6 +182,10 @@ const GerenciarFuncionarios = () => {
   };
 
   const handleToggleStatus = async (funcionario: Funcionario) => {
+    const isAdmin =
+      user?.tipo === "admin" ||
+      (user?.userData as any)?.tipo === "administrador";
+
     if (!isAdmin) {
       toast({
         title: "Acesso negado",
@@ -191,12 +199,14 @@ const GerenciarFuncionarios = () => {
       await funcionariosService.update(funcionario.id, {
         ativo: !funcionario.ativo
       });
-      
+
       toast({
         title: "Status atualizado",
-        description: `Funcionário ${funcionario.ativo ? "desativado" : "ativado"} com sucesso.`
+        description: `Funcionário ${
+          funcionario.ativo ? "desativado" : "ativado"
+        } com sucesso.`
       });
-      
+
       loadFuncionarios();
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
@@ -253,6 +263,9 @@ const GerenciarFuncionarios = () => {
     }
   };
 
+  const isAdmin =
+    user?.tipo === "admin" || (user?.userData as any)?.tipo === "administrador";
+
   if (!isAdmin) {
     return (
       <DashboardLayout>
@@ -296,7 +309,13 @@ const GerenciarFuncionarios = () => {
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={resetForm} className="flex-shrink-0">
+              <Button
+                onClick={() => {
+                  resetForm();
+                  setDialogOpen(true);
+                }}
+                className="flex-shrink-0"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Funcionário
               </Button>
@@ -304,7 +323,9 @@ const GerenciarFuncionarios = () => {
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>
-                  {editingFuncionario ? "Editar Funcionário" : "Novo Funcionário"}
+                  {editingFuncionario
+                    ? "Editar Funcionário"
+                    : "Novo Funcionário"}
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -326,7 +347,10 @@ const GerenciarFuncionarios = () => {
                       id="cpf"
                       value={formData.cpf}
                       onChange={(e) =>
-                        setFormData({ ...formData, cpf: formatCPF(e.target.value) })
+                        setFormData({
+                          ...formData,
+                          cpf: formatCPF(e.target.value)
+                        })
                       }
                       maxLength={14}
                       disabled={!!editingFuncionario}
@@ -352,7 +376,9 @@ const GerenciarFuncionarios = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="administrador">Administrador</SelectItem>
+                      <SelectItem value="administrador">
+                        Administrador
+                      </SelectItem>
                       <SelectItem value="garcom">Garçom</SelectItem>
                       <SelectItem value="caixa">Caixa</SelectItem>
                       <SelectItem value="estoque">Estoque</SelectItem>
@@ -384,7 +410,10 @@ const GerenciarFuncionarios = () => {
                         type="password"
                         value={formData.confirmSenha}
                         onChange={(e) =>
-                          setFormData({ ...formData, confirmSenha: e.target.value })
+                          setFormData({
+                            ...formData,
+                            confirmSenha: e.target.value
+                          })
                         }
                         required={!editingFuncionario}
                         minLength={6}
@@ -429,7 +458,9 @@ const GerenciarFuncionarios = () => {
                 <UserCheck className="h-4 w-4 text-green-600" />
                 <span className="text-sm font-medium">Ativos</span>
               </div>
-              <div className="text-2xl font-bold">{funcionariosAtivos.length}</div>
+              <div className="text-2xl font-bold">
+                {funcionariosAtivos.length}
+              </div>
             </CardContent>
           </Card>
 
@@ -439,7 +470,9 @@ const GerenciarFuncionarios = () => {
                 <UserX className="h-4 w-4 text-red-600" />
                 <span className="text-sm font-medium">Inativos</span>
               </div>
-              <div className="text-2xl font-bold">{funcionariosInativos.length}</div>
+              <div className="text-2xl font-bold">
+                {funcionariosInativos.length}
+              </div>
             </CardContent>
           </Card>
 
@@ -459,7 +492,10 @@ const GerenciarFuncionarios = () => {
         {/* Funcionários Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {funcionarios.map((funcionario) => (
-            <Card key={funcionario.id} className="hover:shadow-md transition-shadow">
+            <Card
+              key={funcionario.id}
+              className="hover:shadow-md transition-shadow"
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{funcionario.nome}</CardTitle>
@@ -467,7 +503,9 @@ const GerenciarFuncionarios = () => {
                     <Badge variant={getTipoColor(funcionario.tipo)}>
                       {getTipoLabel(funcionario.tipo)}
                     </Badge>
-                    <Badge variant={funcionario.ativo ? "default" : "destructive"}>
+                    <Badge
+                      variant={funcionario.ativo ? "default" : "destructive"}
+                    >
                       {funcionario.ativo ? "Ativo" : "Inativo"}
                     </Badge>
                   </div>
@@ -482,7 +520,9 @@ const GerenciarFuncionarios = () => {
                 <div className="text-sm">
                   <span className="text-muted-foreground">Cadastrado em:</span>
                   <span className="ml-2">
-                    {new Date(funcionario.created_at).toLocaleDateString("pt-BR")}
+                    {new Date(funcionario.created_at).toLocaleDateString(
+                      "pt-BR"
+                    )}
                   </span>
                 </div>
 
@@ -490,7 +530,10 @@ const GerenciarFuncionarios = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleEdit(funcionario)}
+                    onClick={() => {
+                      handleEdit(funcionario);
+                      setDialogOpen(true);
+                    }}
                     className="flex-1"
                   >
                     <Edit className="h-3 w-3 mr-1" />
@@ -524,7 +567,12 @@ const GerenciarFuncionarios = () => {
               <p className="text-muted-foreground mb-4">
                 Comece cadastrando os funcionários do seu restaurante.
               </p>
-              <Button onClick={() => setDialogOpen(true)}>
+              <Button
+                onClick={() => {
+                  resetForm();
+                  setDialogOpen(true);
+                }}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Cadastrar primeiro funcionário
               </Button>
