@@ -12,8 +12,7 @@ import { Label } from "@/components/ui/label";
 import { ChefHat, LogIn, Eye, EyeOff, User, Users } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { authFuncionarios } from "@/lib/funcionarios";
-import { funcionariosService } from "@/lib/funcionarios";
+import { funcionariosAuthService } from "@/lib/funcionarios";
 import { signIn } from "@/lib/auth";
 
 const Login = () => {
@@ -63,10 +62,10 @@ const Login = () => {
         }
 
         // Login no Supabase Auth
-        await authFuncionarios.signInWithCpf(cpfLimpo, password);
+        await funcionariosAuthService.signInWithCpf(cpfLimpo, password);
 
         // Buscar dados do funcionário
-        const funcionario = await funcionariosService.getByCpf(cpfLimpo);
+        const funcionario = await funcionariosAuthService.getCurrentFuncionario();
         if (!funcionario) throw new Error("Usuário não encontrado");
         if (!funcionario.ativo) throw new Error("Usuário inativo");
 
@@ -85,7 +84,7 @@ const Login = () => {
             navigate("/cozinha");
             break;
           case "estoque":
-            navigate("/produtos");
+            navigate("/estoque");
             break;
           default:
             navigate("/dashboard");

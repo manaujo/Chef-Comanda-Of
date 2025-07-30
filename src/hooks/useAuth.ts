@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { getCurrentUser, User } from "../lib/auth";
-import { authFuncionarios, type Funcionario } from "../lib/funcionarios";
+import { funcionariosAuthService, type Funcionario } from "../lib/funcionarios";
 
 export type UserType = "admin" | "funcionario";
 
@@ -51,8 +51,7 @@ export const useAuth = () => {
           } else {
             // É um funcionário (email com @chefcomanda.com)
             console.log("👷 Detectado como funcionário");
-            const funcionarioData =
-              await authFuncionarios.getCurrentFuncionario();
+            const funcionarioData = await funcionariosAuthService.getCurrentFuncionario();
             if (funcionarioData) {
               setUser({
                 id: funcionarioData.id,
@@ -104,8 +103,7 @@ export const useAuth = () => {
           } else {
             // É um funcionário
             console.log("👷 Detectado como funcionário");
-            const funcionarioData =
-              await authFuncionarios.getCurrentFuncionario();
+            const funcionarioData = await funcionariosAuthService.getCurrentFuncionario();
             if (funcionarioData) {
               setUser({
                 id: funcionarioData.id,
@@ -143,8 +141,7 @@ export const useAuth = () => {
           } else {
             // É um funcionário
             console.log("👷 Detectado como funcionário");
-            const funcionarioData =
-              await authFuncionarios.getCurrentFuncionario();
+            const funcionarioData = await funcionariosAuthService.getCurrentFuncionario();
             if (funcionarioData) {
               setUser({
                 id: funcionarioData.id,

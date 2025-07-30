@@ -21,18 +21,18 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Users, UserCheck, UserX } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { funcionariosService, type Funcionario } from "@/lib/funcionarios";
+import { funcionariosService, type FuncionarioLocal } from "@/lib/funcionarios";
 import { useAuth } from "@/hooks/useAuth";
 
 import type { UserType } from "@/types/database";
 
 const GerenciarFuncionarios = () => {
   const { user } = useAuth();
-  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
+  const [funcionarios, setFuncionarios] = useState<FuncionarioLocal[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFuncionario, setEditingFuncionario] =
-    useState<Funcionario | null>(null);
+    useState<FuncionarioLocal | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -132,7 +132,7 @@ const GerenciarFuncionarios = () => {
         }
 
         // Criar novo funcionário
-        await funcionariosService.create({
+        await funcionariosService.createLocal({
           nome: formData.nome,
           cpf: cpfLimpo,
           senha: formData.senha,
@@ -169,7 +169,7 @@ const GerenciarFuncionarios = () => {
     }
   };
 
-  const handleEdit = (funcionario: Funcionario) => {
+  const handleEdit = (funcionario: FuncionarioLocal) => {
     setEditingFuncionario(funcionario);
     setFormData({
       nome: funcionario.nome,
@@ -181,7 +181,7 @@ const GerenciarFuncionarios = () => {
     setDialogOpen(true);
   };
 
-  const handleToggleStatus = async (funcionario: Funcionario) => {
+  const handleToggleStatus = async (funcionario: FuncionarioLocal) => {
     const isAdmin =
       user?.tipo === "admin" ||
       (user?.userData as any)?.tipo === "administrador";
@@ -196,7 +196,7 @@ const GerenciarFuncionarios = () => {
     }
 
     try {
-      await funcionariosService.update(funcionario.id, {
+      await funcionariosService.updateLocal(funcionario.id, {
         ativo: !funcionario.ativo
       });
 
@@ -376,15 +376,15 @@ const GerenciarFuncionarios = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="administrador">
-                        Administrador
-                      </SelectItem>
                       <SelectItem value="garcom">Garçom</SelectItem>
                       <SelectItem value="caixa">Caixa</SelectItem>
                       <SelectItem value="estoque">Estoque</SelectItem>
                       <SelectItem value="cozinha">Cozinha</SelectItem>
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Administradores são criados via registro principal
+                  </p>
                 </div>
 
                 {!editingFuncionario && (
