@@ -45,7 +45,6 @@ export interface Categoria {
   descricao?: string;
   cor: string;
   ativo: boolean;
-  user_id: string;
   created_at: string;
   updated_at: string;
 }
@@ -62,7 +61,6 @@ export interface Produto {
   foto_url?: string;
   ativo: boolean;
   tempo_preparo: number;
-  user_id: string;
   created_at: string;
   updated_at: string;
 }
@@ -76,7 +74,6 @@ export interface Insumo {
   estoque_minimo: number;
   fornecedor?: string;
   ativo: boolean;
-  user_id: string;
   created_at: string;
   updated_at: string;
 }
@@ -88,7 +85,6 @@ export interface ProdutoInsumo {
   quantidade_usada: number;
   produto?: Produto;
   insumo?: Insumo;
-  user_id: string;
   created_at: string;
 }
 
@@ -102,7 +98,6 @@ export interface Mesa {
   qr_code?: string;
   observacoes?: string;
   ativo: boolean;
-  user_id: string;
   created_at: string;
   updated_at: string;
 }
@@ -118,7 +113,6 @@ export interface Comanda {
   data_abertura: string;
   data_fechamento?: string;
   valor_total: number;
-  user_id: string;
   mesa?: Mesa;
   garcom?: {
     id: string;
@@ -149,7 +143,6 @@ export interface ComandaItem {
   observacoes?: string;
   cancelado_por?: string;
   motivo_cancelamento?: string;
-  user_id: string;
   produto?: Produto;
   created_at: string;
   updated_at: string;
@@ -165,7 +158,6 @@ export interface Turno {
   valor_fechamento?: number;
   observacoes?: string;
   ativo: boolean;
-  user_id: string;
   operador?: Profile;
   operador_funcionario?: {
     id: string;
@@ -186,7 +178,6 @@ export interface Venda {
   valor_final: number;
   forma_pagamento: string;
   data_venda: string;
-  user_id: string;
   comanda?: Comanda;
   turno?: Turno;
   operador?: Profile;
@@ -204,7 +195,6 @@ export interface Log {
   dados_novos?: any;
   ip_address?: string;
   user_agent?: string;
-  user_id_owner: string;
   usuario?: Profile;
   created_at: string;
 }

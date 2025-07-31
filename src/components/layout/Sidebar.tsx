@@ -94,10 +94,6 @@ export function Sidebar({ isOpen, onToggle, className }: SidebarProps) {
       setInsumosEstoqueBaixo(data);
     } catch (error) {
       console.error("Erro ao carregar estoque baixo:", error);
-      // Não mostrar erro se for problema de autenticação
-      if (!error?.message?.includes('Usuário não autenticado')) {
-        // Silenciar erro para não poluir o console
-      }
     }
   };
 

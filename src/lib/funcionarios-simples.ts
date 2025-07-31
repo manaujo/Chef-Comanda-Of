@@ -7,7 +7,6 @@ export interface FuncionarioSimples {
   nome: string;
   tipo: FuncionarioTipo;
   ativo: boolean;
-  user_id: string;
   created_at: string;
   updated_at: string;
 }
@@ -17,7 +16,6 @@ export const funcionariosSimplesService = {
     const { data, error } = await supabase
       .from('funcionarios_simples')
       .select('*')
-      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('nome');
     
     if (error) throw error;
@@ -30,7 +28,6 @@ export const funcionariosSimplesService = {
       .select('*')
       .eq('tipo', tipo)
       .eq('ativo', true)
-      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('nome');
     
     if (error) throw error;
@@ -42,7 +39,6 @@ export const funcionariosSimplesService = {
       .from('funcionarios_simples')
       .select('*')
       .eq('id', id)
-      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .single();
     
     if (error) throw error;
@@ -50,12 +46,9 @@ export const funcionariosSimplesService = {
   },
 
   async create(funcionario: Omit<FuncionarioSimples, 'id' | 'created_at' | 'updated_at'>) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuário não autenticado');
-
     const { data, error } = await supabase
       .from('funcionarios_simples')
-      .insert({ ...funcionario, user_id: user.id })
+      .insert(funcionario)
       .select()
       .single();
     
