@@ -282,7 +282,7 @@ export const comandasService = {
       .from('comandas')
       .select(`
         *,
-        mesa:mesas(*),
+        mesa:mesas!comandas_mesa_id_fkey(*),
         garcom:profiles(*),
         garcom_funcionario:funcionarios_simples(*),
         itens:comanda_itens(
@@ -301,7 +301,7 @@ export const comandasService = {
       .from('comandas')
       .select(`
         *,
-        mesa:mesas(*),
+        mesa:mesas!comandas_mesa_id_fkey(*),
         garcom:profiles(*),
         garcom_funcionario:funcionarios_simples(*),
         itens:comanda_itens(
@@ -321,7 +321,7 @@ export const comandasService = {
       .from('comandas')
       .select(`
         *,
-        mesa:mesas(*),
+        mesa:mesas!comandas_mesa_id_fkey(*),
         garcom:profiles(*),
         garcom_funcionario:funcionarios_simples(*),
         itens:comanda_itens(
@@ -331,10 +331,10 @@ export const comandasService = {
       `)
       .eq('mesa_id', mesaId)
       .in('status', ['aberta', 'em_preparo', 'pronto_para_fechamento'])
-      .maybeSingle();
+      .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data as Comanda | null;
+    return data as Comanda[];
   },
 
   async getById(id: string) {
@@ -342,7 +342,7 @@ export const comandasService = {
       .from('comandas')
       .select(`
         *,
-        mesa:mesas(*),
+        mesa:mesas!comandas_mesa_id_fkey(*),
         garcom:profiles(*),
         garcom_funcionario:funcionarios_simples(*),
         itens:comanda_itens(
@@ -365,7 +365,7 @@ export const comandasService = {
       })
       .select(`
         *,
-        mesa:mesas(*),
+        mesa:mesas!comandas_mesa_id_fkey(*),
         garcom:profiles(*),
         garcom_funcionario:funcionarios_simples(*)
       `)
@@ -382,7 +382,7 @@ export const comandasService = {
       .eq('id', id)
       .select(`
         *,
-        mesa:mesas(*),
+        mesa:mesas!comandas_mesa_id_fkey(*),
         garcom:profiles(*),
         garcom_funcionario:funcionarios_simples(*)
       `)
@@ -480,7 +480,7 @@ export const comandaItensService = {
         produto:produtos(*),
         comanda:comandas(
           *,
-          mesa:mesas(*),
+          mesa:mesas!comandas_mesa_id_fkey(*),
           garcom:profiles(*),
           garcom_funcionario:funcionarios_simples(*)
         )
@@ -519,7 +519,7 @@ export const pdvService = {
       .from('comandas')
       .select(`
         *,
-        mesa:mesas(*),
+        mesa:mesas!comandas_mesa_id_fkey(*),
         garcom:profiles(*),
         garcom_funcionario:funcionarios_simples(*),
         itens:comanda_itens(
@@ -527,7 +527,7 @@ export const pdvService = {
           produto:produtos(*)
         )
       `)
-      .eq('status', 'pronto_para_fechamento')
+      .in('status', ['pronto_para_fechamento', 'aberta', 'em_preparo'])
       .order('created_at');
     
     if (error) throw error;
