@@ -19,6 +19,12 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
   Clock,
@@ -27,22 +33,26 @@ import {
   DollarSign,
   User,
   Calendar,
-  Plus
+  TrendingUp,
+  TrendingDown,
+  History
 } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { turnosService } from "@/lib/database";
 import { useAuth } from "@/hooks/useAuth";
 import { funcionariosSimplesService, type FuncionarioSimples } from "@/lib/funcionarios-simples";
+import { historicoTurnosService, type HistoricoTurno } from "@/lib/estoque";
 import type { Turno } from "@/types/database";
 
 const Turnos = () => {
-  const [turnos, setTurnos] = useState<Turno[]>([]);
+  const { user } = useAuth();
   const [turnoAtivo, setTurnoAtivo] = useState<Turno | null>(null);
+  const [historicoTurnos, setHistoricoTurnos] = useState<HistoricoTurno[]>([]);
   const [funcionariosCaixa, setFuncionariosCaixa] = useState<FuncionarioSimples[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("turno-atual");
   const [dialogAbrirOpen, setDialogAbrirOpen] = useState(false);
   const [dialogFecharOpen, setDialogFecharOpen] = useState(false);
-  const { user } = useAuth();
   const { toast } = useToast();
 
   const [formAbrir, setFormAbrir] = useState({
@@ -62,16 +72,14 @@ const Turnos = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [turnoAtivoData, funcionariosData] = await Promise.all([
+      const [turnoAtivoData, funcionariosData, historicoData] = await Promise.all([
         turnosService.getTurnoAtivo(),
-        funcionariosSimplesService.getByTipo('caixa')
+        funcionariosSimplesService.getByTipo('caixa'),
+        historicoTurnosService.getAll()
       ]);
       setTurnoAtivo(turnoAtivoData);
       setFuncionariosCaixa(funcionariosData);
-
-      // Aqui você pode carregar histórico de turnos se necessário
-      // const turnosData = await turnosService.getAll();
-      // setTurnos(turnosData);
+      setHistoricoTurnos(historicoData);
     } catch (error) {
       console.error("Erro ao carregar turnos:", error);
       toast({
@@ -116,9 +124,7 @@ const Turnos = () => {
 
       toast({
         title: "Turno aberto",
-        description: `Turno aberto com valor inicial de R$ ${valorInicial.toFixed(
-          2
-        )}.`
+        description: `Turno aberto com valor inicial de R$ ${valorInicial.toFixed(2)}.`
       });
 
       setDialogAbrirOpen(false);
@@ -157,9 +163,7 @@ const Turnos = () => {
 
       toast({
         title: "Turno fechado",
-        description: `Turno fechado com valor final de R$ ${valorFechamento.toFixed(
-          2
-        )}.`
+        description: `Turno fechado com valor final de R$ ${valorFechamento.toFixed(2)}.`
       });
 
       setDialogFecharOpen(false);
@@ -213,17 +217,14 @@ const Turnos = () => {
               <span>Turnos</span>
             </h1>
             <p className="text-sm sm:text-base lg:text-lg text-muted-foreground mt-1">
-              Gerencie os turnos de trabalho
+              Gerencie os turnos de trabalho e histórico
             </p>
           </div>
 
-          {!turnoAtivo ? (
+          {!turnoAtivo && (
             <Dialog open={dialogAbrirOpen} onOpenChange={setDialogAbrirOpen}>
               <DialogTrigger asChild>
-                <Button
-                  onClick={() => setDialogAbrirOpen(true)}
-                  className="flex-shrink-0"
-                >
+                <Button onClick={() => setDialogAbrirOpen(true)} className="flex-shrink-0">
                   <Play className="h-4 w-4 mr-2" />
                   Abrir Turno
                 </Button>
@@ -234,9 +235,7 @@ const Turnos = () => {
                 </DialogHeader>
                 <form onSubmit={handleAbrirTurno} className="space-y-4">
                   <div>
-                    <Label htmlFor="operador_funcionario_id">
-                      Operador de Caixa *
-                    </Label>
+                    <Label htmlFor="operador_funcionario_id">Operador de Caixa *</Label>
                     <Select
                       value={formAbrir.operador_funcionario_id}
                       onValueChange={(value) =>
@@ -263,9 +262,7 @@ const Turnos = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="valor_inicial">
-                      Valor Inicial do Caixa (R$)
-                    </Label>
+                    <Label htmlFor="valor_inicial">Valor Inicial do Caixa (R$)</Label>
                     <Input
                       id="valor_inicial"
                       type="number"
@@ -273,7 +270,7 @@ const Turnos = () => {
                       min="0"
                       value={formAbrir.valor_inicial}
                       onChange={(e) =>
-                        setFormAbrir({ valor_inicial: e.target.value })
+                        setFormAbrir({ ...formAbrir, valor_inicial: e.target.value })
                       }
                       placeholder="0.00"
                     />
@@ -285,12 +282,10 @@ const Turnos = () => {
                   <div className="bg-muted p-4 rounded-lg">
                     <div className="flex items-center space-x-2 mb-2">
                       <User className="h-4 w-4" />
-                      <span className="font-medium">Operador:</span>
+                      <span className="font-medium">Responsável:</span>
                     </div>
-                    <p>{user?.nome_completo}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {user?.email}
-                    </p>
+                    <p>{user?.nome}</p>
+                    <p className="text-sm text-muted-foreground">{user?.email}</p>
                   </div>
 
                   <div className="flex justify-end space-x-2">
@@ -309,7 +304,9 @@ const Turnos = () => {
                 </form>
               </DialogContent>
             </Dialog>
-          ) : (
+          )}
+
+          {turnoAtivo && (
             <Dialog open={dialogFecharOpen} onOpenChange={setDialogFecharOpen}>
               <DialogTrigger asChild>
                 <Button variant="destructive">
@@ -325,28 +322,22 @@ const Turnos = () => {
                   <div className="bg-muted p-4 rounded-lg space-y-2">
                     <div className="flex justify-between">
                       <span>Valor Inicial:</span>
-                      <span className="font-medium">
-                        R$ {turnoAtivo.valor_inicial.toFixed(2)}
-                      </span>
+                      <span className="font-medium">R$ {turnoAtivo.valor_inicial.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Tempo de Turno:</span>
-                      <span className="font-medium">
-                        {formatarTempo(turnoAtivo.data_abertura)}
-                      </span>
+                      <span className="font-medium">{formatarTempo(turnoAtivo.data_abertura)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Operador:</span>
                       <span className="font-medium">
-                        {turnoAtivo.operador?.nome_completo}
+                        {turnoAtivo.operador_funcionario?.nome || turnoAtivo.operador?.nome_completo}
                       </span>
                     </div>
                   </div>
 
                   <div>
-                    <Label htmlFor="valor_fechamento">
-                      Valor Final do Caixa (R$) *
-                    </Label>
+                    <Label htmlFor="valor_fechamento">Valor Final do Caixa (R$) *</Label>
                     <Input
                       id="valor_fechamento"
                       type="number"
@@ -354,10 +345,7 @@ const Turnos = () => {
                       min="0"
                       value={formFechar.valor_fechamento}
                       onChange={(e) =>
-                        setFormFechar({
-                          ...formFechar,
-                          valor_fechamento: e.target.value
-                        })
+                        setFormFechar({ ...formFechar, valor_fechamento: e.target.value })
                       }
                       required
                       placeholder="0.00"
@@ -373,13 +361,10 @@ const Turnos = () => {
                         <span>Diferença:</span>
                         <span
                           className={`font-bold ${
-                            calcularDiferenca() >= 0
-                              ? "text-green-600"
-                              : "text-red-600"
+                            calcularDiferenca() >= 0 ? "text-green-600" : "text-red-600"
                           }`}
                         >
-                          {calcularDiferenca() >= 0 ? "+" : ""}R${" "}
-                          {calcularDiferenca().toFixed(2)}
+                          {calcularDiferenca() >= 0 ? "+" : ""}R$ {calcularDiferenca().toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -391,10 +376,7 @@ const Turnos = () => {
                       id="observacoes"
                       value={formFechar.observacoes}
                       onChange={(e) =>
-                        setFormFechar({
-                          ...formFechar,
-                          observacoes: e.target.value
-                        })
+                        setFormFechar({ ...formFechar, observacoes: e.target.value })
                       }
                       placeholder="Observações sobre o fechamento do turno..."
                     />
@@ -419,116 +401,282 @@ const Turnos = () => {
           )}
         </div>
 
-        {/* Status do Turno Atual */}
-        {turnoAtivo ? (
-          <Card className="bg-green-50 border-green-200">
-            <CardHeader>
-              <CardTitle className="text-green-800 flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                <span>Turno Ativo</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="flex items-center space-x-3">
-                  <User className="h-5 w-5 text-green-600" />
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="turno-atual">Turno Atual</TabsTrigger>
+            <TabsTrigger value="historico">Histórico</TabsTrigger>
+          </TabsList>
+
+          {/* Tab Turno Atual */}
+          <TabsContent value="turno-atual" className="space-y-4">
+            {/* Status do Turno Atual */}
+            {turnoAtivo ? (
+              <Card className="bg-green-50 border-green-200">
+                <CardHeader>
+                  <CardTitle className="text-green-800 flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                    <span>Turno Ativo</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="flex items-center space-x-3">
+                      <User className="h-5 w-5 text-green-600" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Operador</p>
+                        <p className="font-medium">
+                          {turnoAtivo.operador_funcionario?.nome || turnoAtivo.operador?.nome_completo}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-3">
+                      <Calendar className="h-5 w-5 text-green-600" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Início</p>
+                        <p className="font-medium">
+                          {new Date(turnoAtivo.data_abertura).toLocaleString("pt-BR")}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-3">
+                      <DollarSign className="h-5 w-5 text-green-600" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Valor Inicial</p>
+                        <p className="font-medium">R$ {turnoAtivo.valor_inicial.toFixed(2)}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-3">
+                      <Clock className="h-5 w-5 text-green-600" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Tempo Ativo</p>
+                        <p className="font-medium">{formatarTempo(turnoAtivo.data_abertura)}</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="bg-yellow-50 border-yellow-200">
+                <CardContent className="p-6 text-center">
+                  <Clock className="h-12 w-12 text-yellow-600 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+                    Nenhum turno ativo
+                  </h3>
+                  <p className="text-yellow-700 mb-4">
+                    Abra um turno para começar a registrar vendas no caixa.
+                  </p>
+                  <Button onClick={() => setDialogAbrirOpen(true)}>
+                    <Play className="h-4 w-4 mr-2" />
+                    Abrir Turno
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Instruções */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Como funciona o controle de turnos</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <p className="text-sm text-muted-foreground">Operador</p>
-                    <p className="font-medium">
-                      {turnoAtivo.operador_funcionario?.nome || turnoAtivo.operador?.nome_completo}
-                    </p>
+                    <h4 className="font-semibold mb-2 flex items-center space-x-2">
+                      <Play className="h-4 w-4 text-green-600" />
+                      <span>Abertura de Turno</span>
+                    </h4>
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      <li>• Selecione o funcionário operador de caixa</li>
+                      <li>• Informe o valor inicial em dinheiro no caixa</li>
+                      <li>• O sistema registra o horário de abertura</li>
+                      <li>• Apenas um turno pode estar ativo por vez</li>
+                      <li>• Todas as vendas serão vinculadas ao turno ativo</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-2 flex items-center space-x-2">
+                      <Square className="h-4 w-4 text-red-600" />
+                      <span>Fechamento de Turno</span>
+                    </h4>
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      <li>• Conte o dinheiro no caixa e informe o valor final</li>
+                      <li>• O sistema calcula automaticamente a diferença</li>
+                      <li>• Adicione observações se necessário</li>
+                      <li>• Após o fechamento, um novo turno pode ser aberto</li>
+                      <li>• O histórico é salvo automaticamente</li>
+                    </ul>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-                <div className="flex items-center space-x-3">
-                  <Calendar className="h-5 w-5 text-green-600" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Início</p>
-                    <p className="font-medium">
-                      {new Date(turnoAtivo.data_abertura).toLocaleString(
-                        "pt-BR"
-                      )}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-3">
-                  <DollarSign className="h-5 w-5 text-green-600" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Valor Inicial
-                    </p>
-                    <p className="font-medium">
-                      R$ {turnoAtivo.valor_inicial.toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-3">
-                  <Clock className="h-5 w-5 text-green-600" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Tempo Ativo</p>
-                    <p className="font-medium">
-                      {formatarTempo(turnoAtivo.data_abertura)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="bg-yellow-50 border-yellow-200">
-            <CardContent className="p-6 text-center">
-              <Clock className="h-12 w-12 text-yellow-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-yellow-800 mb-2">
-                Nenhum turno ativo
-              </h3>
-              <p className="text-yellow-700 mb-4">
-                Abra um turno para começar a registrar vendas no caixa.
-              </p>
-              <Button onClick={() => setDialogAbrirOpen(true)}>
-                <Play className="h-4 w-4 mr-2" />
-                Abrir Turno
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Instruções */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Como funciona o controle de turnos</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h4 className="font-semibold mb-2 flex items-center space-x-2">
-                  <Play className="h-4 w-4 text-green-600" />
-                  <span>Abertura de Turno</span>
-                </h4>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Informe o valor inicial em dinheiro no caixa</li>
-                  <li>• O sistema registra o operador e horário de abertura</li>
-                  <li>• Apenas um turno pode estar ativo por vez</li>
-                  <li>• Todas as vendas serão vinculadas ao turno ativo</li>
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="font-semibold mb-2 flex items-center space-x-2">
-                  <Square className="h-4 w-4 text-red-600" />
-                  <span>Fechamento de Turno</span>
-                </h4>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Conte o dinheiro no caixa e informe o valor final</li>
-                  <li>• O sistema calcula automaticamente a diferença</li>
-                  <li>• Adicione observações se necessário</li>
-                  <li>• Após o fechamento, um novo turno pode ser aberto</li>
-                </ul>
-              </div>
+          {/* Tab Histórico */}
+          <TabsContent value="historico" className="space-y-4">
+            <div className="flex items-center space-x-2 mb-4">
+              <History className="h-5 w-5" />
+              <h3 className="text-lg font-semibold">Histórico de Turnos</h3>
             </div>
-          </CardContent>
-        </Card>
+
+            {/* Stats do Histórico */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-2">
+                    <Clock className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium">Total Turnos</span>
+                  </div>
+                  <div className="text-2xl font-bold">{historicoTurnos.length}</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-2">
+                    <TrendingUp className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium">Total Vendas</span>
+                  </div>
+                  <div className="text-2xl font-bold">
+                    R$ {historicoTurnos.reduce((total, h) => total + h.total_vendas, 0).toFixed(2)}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-2">
+                    <TrendingDown className="h-4 w-4 text-purple-600" />
+                    <span className="text-sm font-medium">Vendas Realizadas</span>
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {historicoTurnos.reduce((total, h) => total + h.quantidade_vendas, 0)}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-2">
+                    <DollarSign className="h-4 w-4 text-orange-600" />
+                    <span className="text-sm font-medium">Ticket Médio</span>
+                  </div>
+                  <div className="text-2xl font-bold">
+                    R$ {historicoTurnos.length > 0 
+                      ? (historicoTurnos.reduce((total, h) => total + h.total_vendas, 0) / 
+                         Math.max(1, historicoTurnos.reduce((total, h) => total + h.quantidade_vendas, 0))).toFixed(2)
+                      : "0.00"}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Lista do Histórico */}
+            <div className="space-y-4">
+              {historicoTurnos.map((historico) => (
+                <Card key={historico.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div>
+                        <div className="flex items-center space-x-2 mb-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">Operador</span>
+                        </div>
+                        <p className="text-sm">
+                          {historico.operador_funcionario?.nome || historico.operador?.nome_completo}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {historico.operador_funcionario?.tipo || 'Administrador'}
+                        </p>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">Período</span>
+                        </div>
+                        <p className="text-sm">
+                          {new Date(historico.data_abertura).toLocaleDateString("pt-BR")}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatarTempo(historico.data_abertura, historico.data_fechamento)}
+                        </p>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center space-x-2 mb-2">
+                          <DollarSign className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">Valores</span>
+                        </div>
+                        <p className="text-sm">
+                          Inicial: R$ {historico.valor_inicial.toFixed(2)}
+                        </p>
+                        <p className="text-sm">
+                          Final: R$ {historico.valor_fechamento?.toFixed(2) || "0.00"}
+                        </p>
+                        <p className={`text-sm font-medium ${
+                          (historico.diferenca || 0) >= 0 ? "text-green-600" : "text-red-600"
+                        }`}>
+                          Diferença: {(historico.diferenca || 0) >= 0 ? "+" : ""}R$ {(historico.diferenca || 0).toFixed(2)}
+                        </p>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center space-x-2 mb-2">
+                          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">Vendas</span>
+                        </div>
+                        <p className="text-sm">
+                          Total: R$ {historico.total_vendas.toFixed(2)}
+                        </p>
+                        <p className="text-sm">
+                          Quantidade: {historico.quantidade_vendas}
+                        </p>
+                        <p className="text-sm">
+                          Ticket Médio: R$ {historico.quantidade_vendas > 0 
+                            ? (historico.total_vendas / historico.quantidade_vendas).toFixed(2)
+                            : "0.00"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {historico.observacoes && (
+                      <div className="mt-4 pt-4 border-t">
+                        <p className="text-sm text-muted-foreground">
+                          <strong>Observações:</strong> {historico.observacoes}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="mt-4 pt-4 border-t flex items-center justify-between">
+                      <div className="text-xs text-muted-foreground">
+                        Turno #{historico.turno_id.slice(-8)}
+                      </div>
+                      <Badge variant={historico.data_fechamento ? "secondary" : "default"}>
+                        {historico.data_fechamento ? "Fechado" : "Ativo"}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+              {historicoTurnos.length === 0 && (
+                <Card>
+                  <CardContent className="text-center py-12">
+                    <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Nenhum histórico encontrado</h3>
+                    <p className="text-muted-foreground">
+                      O histórico de turnos aparecerá aqui após o primeiro turno ser fechado.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardLayout>
   );

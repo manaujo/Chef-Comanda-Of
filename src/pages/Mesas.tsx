@@ -38,7 +38,9 @@ import {
   DollarSign,
   ChefHat,
   Eye,
-  X
+  X,
+  Trash2,
+  Edit
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -67,6 +69,8 @@ const Mesas = () => {
   const [dialogProdutosOpen, setDialogProdutosOpen] = useState(false);
   const [dialogPagamentoOpen, setDialogPagamentoOpen] = useState(false);
   const [dialogComandaOpen, setDialogComandaOpen] = useState(false);
+  const [dialogCriarMesaOpen, setDialogCriarMesaOpen] = useState(false);
+  const [dialogEditarMesaOpen, setDialogEditarMesaOpen] = useState(false);
 
   // Estados de seleção
   const [mesaSelecionada, setMesaSelecionada] = useState<Mesa | null>(null);
@@ -83,6 +87,13 @@ const Mesas = () => {
   const [valorDesconto, setValorDesconto] = useState<string>("0");
   const [tipoDesconto, setTipoDesconto] = useState<"valor" | "percentual">("valor");
   const [valorCouvert, setValorCouvert] = useState<string>("0");
+
+  // Estados do formulário de mesa
+  const [formMesa, setFormMesa] = useState({
+    numero: "",
+    nome: "",
+    capacidade: "4"
+  });
 
   const categorias: { key: CategoriaProduto; label: string; icon: any }[] = [
     { key: "entrada", label: "Entradas", icon: Coffee },
@@ -148,6 +159,22 @@ const Mesas = () => {
   };
 
   const handleClickMesa = async (mesa: Mesa, acao: 'produtos' | 'pagamento' | 'comanda') => {
+    // Verificar se a mesa está em estado "fechada" e permitir uso
+    if (mesa.status === "fechada") {
+      // Liberar mesa automaticamente se estiver fechada
+      try {
+        await mesasService.updateStatus(mesa.id, "livre");
+        loadMesas();
+        toast({
+          title: "Mesa liberada",
+          description: "Mesa liberada automaticamente."
+        });
+        return;
+      } catch (error) {
+        console.error("Erro ao liberar mesa:", error);
+      }
+    }
+
     setMesaSelecionada(mesa);
     
     if (acao === 'produtos') {
@@ -277,6 +304,104 @@ const Mesas = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const handleCriarMesa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await mesasService.create({
+        numero: parseInt(formMesa.numero),
+        nome: formMesa.nome || undefined,
+        capacidade: parseInt(formMesa.capacidade),
+        status: "livre",
+        ativo: true
+      });
+
+      toast({
+        title: "Mesa criada",
+        description: "Mesa criada com sucesso."
+      });
+
+      setDialogCriarMesaOpen(false);
+      setFormMesa({ numero: "", nome: "", capacidade: "4" });
+      loadMesas();
+    } catch (error: any) {
+      console.error("Erro ao criar mesa:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao criar mesa.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEditarMesa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mesaSelecionada) return;
+
+    try {
+      await mesasService.update(mesaSelecionada.id, {
+        numero: parseInt(formMesa.numero),
+        nome: formMesa.nome || undefined,
+        capacidade: parseInt(formMesa.capacidade)
+      });
+
+      toast({
+        title: "Mesa atualizada",
+        description: "Mesa atualizada com sucesso."
+      });
+
+      setDialogEditarMesaOpen(false);
+      setMesaSelecionada(null);
+      setFormMesa({ numero: "", nome: "", capacidade: "4" });
+      loadMesas();
+    } catch (error: any) {
+      console.error("Erro ao atualizar mesa:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao atualizar mesa.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleExcluirMesa = async (mesa: Mesa) => {
+    if (mesa.status !== "livre") {
+      toast({
+        title: "Erro",
+        description: "Não é possível excluir uma mesa ocupada.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (confirm(`Tem certeza que deseja excluir a Mesa ${mesa.numero}?`)) {
+      try {
+        await mesasService.delete(mesa.id);
+        toast({
+          title: "Mesa excluída",
+          description: "Mesa excluída com sucesso."
+        });
+        loadMesas();
+      } catch (error: any) {
+        console.error("Erro ao excluir mesa:", error);
+        toast({
+          title: "Erro",
+          description: error.message || "Erro ao excluir mesa.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  const handleEditarMesaClick = (mesa: Mesa) => {
+    setMesaSelecionada(mesa);
+    setFormMesa({
+      numero: mesa.numero.toString(),
+      nome: mesa.nome || "",
+      capacidade: mesa.capacidade.toString()
+    });
+    setDialogEditarMesaOpen(true);
   };
 
   const calcularSubtotal = () => {
@@ -463,14 +588,26 @@ const Mesas = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="space-y-8 p-4 lg:p-6">
           {/* Header */}
-          <div className="text-center">
-            <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-3 flex items-center justify-center space-x-3">
-              <Coffee className="h-10 w-10 lg:h-12 lg:w-12 text-primary" />
-              <span>Controle de Mesas</span>
-            </h1>
-            <p className="text-xl text-gray-600">
-              Gerencie comandas, adicione produtos e processe pagamentos
-            </p>
+          <div className="flex items-center justify-between">
+            <div className="text-center flex-1">
+              <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-3 flex items-center justify-center space-x-3">
+                <Coffee className="h-10 w-10 lg:h-12 lg:w-12 text-primary" />
+                <span>Controle de Mesas</span>
+              </h1>
+              <p className="text-xl text-gray-600">
+                Gerencie comandas, adicione produtos e processe pagamentos
+              </p>
+            </div>
+            
+            <div className="flex space-x-2">
+              <Button
+                onClick={() => setDialogCriarMesaOpen(true)}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Mesa
+              </Button>
+            </div>
           </div>
 
           {/* Stats Cards */}
@@ -555,7 +692,35 @@ const Mesas = () => {
                       </Badge>
                     </div>
 
-                    <CardContent className="p-6">
+                    {/* Botões de Ação da Mesa */}
+                    <div className="absolute top-4 left-4 z-10 flex space-x-1">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 bg-white/90 hover:bg-white"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditarMesaClick(mesa);
+                        }}
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      {mesa.status === "livre" && (
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleExcluirMesa(mesa);
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+
+                    <CardContent className="p-6 pt-12">
                       <div className="text-center space-y-6">
                         {/* Ícone e Número da Mesa */}
                         <div className="flex flex-col items-center space-y-3">
@@ -590,6 +755,34 @@ const Mesas = () => {
                               <Plus className="h-5 w-5 mr-2" />
                               Iniciar Atendimento
                             </Button>
+                          ) : mesa.status === "fechada" || mesa.status === "aguardando_pagamento" ? (
+                            <div className="space-y-2">
+                              <Button
+                                onClick={() => handleClickMesa(mesa, 'comanda')}
+                                variant="outline"
+                                className="w-full border-2 font-semibold py-3 rounded-xl hover:shadow-lg transition-all duration-200"
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Ver Comanda
+                              </Button>
+
+                              <Button
+                                onClick={() => handleClickMesa(mesa, 'pagamento')}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                              >
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                Finalizar Pagamento
+                              </Button>
+
+                              <Button
+                                onClick={() => handleClickMesa(mesa, 'produtos')}
+                                variant="outline"
+                                className="w-full border-2 font-semibold py-3 rounded-xl hover:shadow-lg transition-all duration-200"
+                              >
+                                <ShoppingCart className="h-4 w-4 mr-2" />
+                                Adicionar Itens
+                              </Button>
+                            </div>
                           ) : (
                             <div className="space-y-2">
                               <Button
@@ -642,6 +835,10 @@ const Mesas = () => {
                 <p className="text-gray-600 mb-4">
                   Configure as mesas do seu restaurante para começar.
                 </p>
+                <Button onClick={() => setDialogCriarMesaOpen(true)} className="mr-2">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Criar Mesa
+                </Button>
                 <Button onClick={handleTryAgain} variant="outline">
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Atualizar
@@ -650,6 +847,125 @@ const Mesas = () => {
             </Card>
           )}
 
+          {/* Dialog Criar Mesa */}
+          <Dialog open={dialogCriarMesaOpen} onOpenChange={setDialogCriarMesaOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Criar Nova Mesa</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleCriarMesa} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="numero">Número da Mesa *</Label>
+                    <Input
+                      id="numero"
+                      type="number"
+                      min="1"
+                      value={formMesa.numero}
+                      onChange={(e) => setFormMesa({ ...formMesa, numero: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="capacidade">Capacidade *</Label>
+                    <Input
+                      id="capacidade"
+                      type="number"
+                      min="1"
+                      value={formMesa.capacidade}
+                      onChange={(e) => setFormMesa({ ...formMesa, capacidade: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="nome">Nome da Mesa (opcional)</Label>
+                  <Input
+                    id="nome"
+                    value={formMesa.nome}
+                    onChange={(e) => setFormMesa({ ...formMesa, nome: e.target.value })}
+                    placeholder="Ex: Mesa da Janela"
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDialogCriarMesaOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Criar Mesa
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Dialog Editar Mesa */}
+          <Dialog open={dialogEditarMesaOpen} onOpenChange={setDialogEditarMesaOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Editar Mesa {mesaSelecionada?.numero}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleEditarMesa} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="numero_edit">Número da Mesa *</Label>
+                    <Input
+                      id="numero_edit"
+                      type="number"
+                      min="1"
+                      value={formMesa.numero}
+                      onChange={(e) => setFormMesa({ ...formMesa, numero: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="capacidade_edit">Capacidade *</Label>
+                    <Input
+                      id="capacidade_edit"
+                      type="number"
+                      min="1"
+                      value={formMesa.capacidade}
+                      onChange={(e) => setFormMesa({ ...formMesa, capacidade: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="nome_edit">Nome da Mesa (opcional)</Label>
+                  <Input
+                    id="nome_edit"
+                    value={formMesa.nome}
+                    onChange={(e) => setFormMesa({ ...formMesa, nome: e.target.value })}
+                    placeholder="Ex: Mesa da Janela"
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDialogEditarMesaOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit">
+                    <Edit className="h-4 w-4 mr-2" />
+                    Atualizar Mesa
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Outros dialogs permanecem iguais... */}
           {/* Dialog Selecionar Garçom */}
           <Dialog open={dialogGarcomOpen} onOpenChange={setDialogGarcomOpen}>
             <DialogContent className="sm:max-w-md">

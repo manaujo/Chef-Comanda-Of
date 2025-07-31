@@ -15,7 +15,9 @@ import {
   BarChart3,
   Package,
   CreditCard,
-  ChefHat
+  ChefHat,
+  Calendar,
+  ShoppingCart
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -24,20 +26,27 @@ import {
   mesasService,
   comandasService,
   vendasService,
-  insumosService
+  turnosService
 } from "@/lib/database";
-import type { Mesa, Comanda, Venda, Insumo } from "@/types/database";
+import { insumosEstoqueService } from "@/lib/estoque";
+import type { Mesa, Comanda, Venda, Turno } from "@/types/database";
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [comandas, setComandasAbertas] = useState<Comanda[]>([]);
-  const [vendas, setVendas] = useState<Venda[]>([]);
-  const [insumosEstoqueBaixo, setInsumosEstoqueBaixo] = useState<Insumo[]>([]);
+  const [vendasHoje, setVendasHoje] = useState<Venda[]>([]);
+  const [vendasMes, setVendasMes] = useState<Venda[]>([]);
+  const [turnoAtivo, setTurnoAtivo] = useState<Turno | null>(null);
+  const [insumosEstoqueBaixo, setInsumosEstoqueBaixo] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadDashboardData();
+    
+    // Atualizar dados a cada 30 segundos
+    const interval = setInterval(loadDashboardData, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const loadDashboardData = async () => {
@@ -45,20 +54,34 @@ const Dashboard = () => {
 
     setLoading(true);
     try {
-      const [mesasData, comandasData, vendasData, insumosData] =
-        await Promise.all([
-          mesasService.getAll(),
-          comandasService.getAbertas(),
-          vendasService.getByPeriodo(
-            new Date().toISOString().split("T")[0] + "T00:00:00.000Z",
-            new Date().toISOString().split("T")[0] + "T23:59:59.999Z"
-          ),
-          Promise.resolve([])
-        ]);
+      const hoje = new Date();
+      const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).toISOString();
+      const fimHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 23, 59, 59).toISOString();
+      
+      const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString();
+      const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59).toISOString();
+
+      const [
+        mesasData, 
+        comandasData, 
+        vendasHojeData, 
+        vendasMesData,
+        turnoAtivoData,
+        insumosData
+      ] = await Promise.all([
+        mesasService.getAll(),
+        comandasService.getAbertas(),
+        vendasService.getByPeriodo(inicioHoje, fimHoje),
+        vendasService.getByPeriodo(inicioMes, fimMes),
+        turnosService.getTurnoAtivo(),
+        insumosEstoqueService.getEstoqueBaixo()
+      ]);
 
       setMesas(mesasData);
       setComandasAbertas(comandasData);
-      setVendas(vendasData);
+      setVendasHoje(vendasHojeData);
+      setVendasMes(vendasMesData);
+      setTurnoAtivo(turnoAtivoData);
       setInsumosEstoqueBaixo(insumosData);
     } catch (error) {
       console.error("Erro ao carregar dados do dashboard:", error);
@@ -67,14 +90,13 @@ const Dashboard = () => {
     }
   };
 
-  const mesasOcupadas = mesas.filter(
-    (mesa) => mesa.status === "ocupada"
-  ).length;
-  const mesasLivres = mesas.filter((mesa) => mesa.status === "livre").length;
-  const vendasHoje = vendas.reduce(
-    (total, venda) => total + venda.valor_final,
-    0
-  );
+  const mesasOcupadas = mesas.filter(mesa => mesa.status === "ocupada").length;
+  const mesasLivres = mesas.filter(mesa => mesa.status === "livre").length;
+  const mesasProntas = mesas.filter(mesa => mesa.status === "fechada" || mesa.status === "aguardando_pagamento").length;
+  
+  const totalVendasHoje = vendasHoje.reduce((total, venda) => total + venda.valor_final, 0);
+  const totalVendasMes = vendasMes.reduce((total, venda) => total + venda.valor_final, 0);
+  const ticketMedioHoje = vendasHoje.length > 0 ? totalVendasHoje / vendasHoje.length : 0;
   const comandasAbertas = comandas.length;
 
   const quickActions = [
@@ -141,7 +163,11 @@ const Dashboard = () => {
               })}
             </div>
             <div className="text-xs sm:text-sm lg:text-base text-muted-foreground">
-              Horário atual
+              {turnoAtivo ? (
+                <Badge variant="secondary">Turno Ativo</Badge>
+              ) : (
+                <Badge variant="destructive">Sem Turno</Badge>
+              )}
             </div>
           </div>
         </div>
@@ -176,87 +202,129 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-6 gap-3 lg:gap-4">
-          <Card>
+        {/* Summary Cards - Vendas e Operações */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-3 lg:gap-4">
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
             <CardContent className="p-3 sm:p-4 lg:p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">
+                  <p className="text-xs sm:text-sm font-medium text-green-700">
                     Vendas Hoje
                   </p>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-bold">
-                    R$ {vendasHoje.toFixed(2)}
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold text-green-800">
+                    R$ {totalVendasHoje.toFixed(2)}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {vendas.length} vendas realizadas
+                  <p className="text-xs text-green-600">
+                    {vendasHoje.length} vendas
                   </p>
                 </div>
-                <div className="p-2 bg-green-100 rounded-full">
-                  <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                <div className="p-2 bg-green-200 rounded-full">
+                  <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-700" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardContent className="p-3 sm:p-4 lg:p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700">
+                    Vendas do Mês
+                  </p>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-800">
+                    R$ {totalVendasMes.toFixed(2)}
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    {vendasMes.length} vendas
+                  </p>
+                </div>
+                <div className="p-2 bg-blue-200 rounded-full">
+                  <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-700" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+            <CardContent className="p-3 sm:p-4 lg:p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm font-medium text-purple-700">
+                    Ticket Médio Hoje
+                  </p>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold text-purple-800">
+                    R$ {ticketMedioHoje.toFixed(2)}
+                  </p>
+                  <p className="text-xs text-purple-600">
+                    Por venda
+                  </p>
+                </div>
+                <div className="p-2 bg-purple-200 rounded-full">
+                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-purple-700" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+            <CardContent className="p-3 sm:p-4 lg:p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm font-medium text-orange-700">
                     Comandas Abertas
                   </p>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-bold">
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold text-orange-800">
                     {comandasAbertas}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Comandas em andamento
+                  <p className="text-xs text-orange-600">
+                    Em andamento
                   </p>
                 </div>
-                <div className="p-2 bg-blue-100 rounded-full">
-                  <UtensilsCrossed className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                <div className="p-2 bg-orange-200 rounded-full">
+                  <UtensilsCrossed className="h-4 w-4 sm:h-5 sm:w-5 text-orange-700" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gradient-to-br from-cyan-50 to-cyan-100 border-cyan-200">
             <CardContent className="p-3 sm:p-4 lg:p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">
+                  <p className="text-xs sm:text-sm font-medium text-cyan-700">
                     Mesas Ocupadas
                   </p>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-bold">
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold text-cyan-800">
                     {mesasOcupadas}/{mesas.length}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {mesasLivres} mesas livres
+                  <p className="text-xs text-cyan-600">
+                    {mesasLivres} livres, {mesasProntas} prontas
                   </p>
                 </div>
-                <div className="p-2 bg-orange-100 rounded-full">
-                  <Coffee className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
+                <div className="p-2 bg-cyan-200 rounded-full">
+                  <Coffee className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-700" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className={`bg-gradient-to-br ${insumosEstoqueBaixo.length > 0 ? 'from-red-50 to-red-100 border-red-200' : 'from-gray-50 to-gray-100 border-gray-200'}`}>
             <CardContent className="p-3 sm:p-4 lg:p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">
+                  <p className={`text-xs sm:text-sm font-medium ${insumosEstoqueBaixo.length > 0 ? 'text-red-700' : 'text-gray-700'}`}>
                     Estoque Baixo
                   </p>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-bold">
+                  <p className={`text-lg sm:text-xl lg:text-2xl font-bold ${insumosEstoqueBaixo.length > 0 ? 'text-red-800' : 'text-gray-800'}`}>
                     {insumosEstoqueBaixo.length}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className={`text-xs ${insumosEstoqueBaixo.length > 0 ? 'text-red-600' : 'text-gray-600'}`}>
                     Insumos abaixo do mínimo
                   </p>
                 </div>
-                <div className="p-2 bg-red-100 rounded-full">
-                  <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
+                <div className={`p-2 rounded-full ${insumosEstoqueBaixo.length > 0 ? 'bg-red-200' : 'bg-gray-200'}`}>
+                  <AlertTriangle className={`h-4 w-4 sm:h-5 sm:w-5 ${insumosEstoqueBaixo.length > 0 ? 'text-red-700' : 'text-gray-700'}`} />
                 </div>
               </div>
             </CardContent>
@@ -264,7 +332,7 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-4 lg:gap-6">
-          {/* Mesas Status */}
+          {/* Status das Mesas */}
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -296,12 +364,12 @@ const Dashboard = () => {
                     >
                       <div className="flex items-center space-x-2">
                         <div
-                          className={`w-2 h-2 rounded-full ${
+                          className={`w-3 h-3 rounded-full ${
                             mesa.status === "livre"
                               ? "bg-green-500"
                               : mesa.status === "ocupada"
                               ? "bg-red-500"
-                              : mesa.status === "reservada"
+                              : mesa.status === "fechada" || mesa.status === "aguardando_pagamento"
                               ? "bg-blue-500"
                               : "bg-gray-500"
                           }`}
@@ -314,19 +382,18 @@ const Dashboard = () => {
                             ? "default"
                             : mesa.status === "ocupada"
                             ? "destructive"
-                            : mesa.status === "reservada"
+                            : mesa.status === "fechada" || mesa.status === "aguardando_pagamento"
                             ? "secondary"
                             : "outline"
                         }
                       >
-                        {mesa.status === "livre" && (
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                        )}
-                        {mesa.status === "ocupada" && (
-                          <Clock className="h-3 w-3 mr-1" />
-                        )}
-                        {mesa.status.charAt(0).toUpperCase() +
-                          mesa.status.slice(1)}
+                        {mesa.status === "livre" && <CheckCircle className="h-3 w-3 mr-1" />}
+                        {mesa.status === "ocupada" && <Clock className="h-3 w-3 mr-1" />}
+                        {(mesa.status === "fechada" || mesa.status === "aguardando_pagamento") && <UtensilsCrossed className="h-3 w-3 mr-1" />}
+                        {mesa.status === "livre" && "Livre"}
+                        {mesa.status === "ocupada" && "Ocupada"}
+                        {(mesa.status === "fechada" || mesa.status === "aguardando_pagamento") && "Pronta"}
+                        {mesa.status === "reservada" && "Reservada"}
                       </Badge>
                     </div>
                   ))}
@@ -340,7 +407,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Comandas Recentes */}
+          {/* Comandas Abertas */}
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -382,7 +449,7 @@ const Dashboard = () => {
                           </span>
                         </div>
                         {comanda.mesa && (
-                          <span className="text-sm text-muted-foreground ml-2">
+                          <span className="text-sm text-muted-foreground ml-4">
                             Mesa {comanda.mesa.numero}
                           </span>
                         )}
@@ -402,11 +469,67 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
+          {/* Vendas do Dia */}
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center space-x-2">
+                  <BarChart3 className="h-5 w-5" />
+                  <span>Vendas Hoje</span>
+                </CardTitle>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/relatorios">
+                    Ver relatórios
+                    <ArrowRight className="h-3 w-3 ml-1" />
+                  </Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted rounded animate-pulse" />
+                  <div className="h-4 bg-muted rounded animate-pulse" />
+                  <div className="h-4 bg-muted rounded animate-pulse" />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4 text-center">
+                    <div className="p-3 bg-green-50 rounded-lg">
+                      <div className="text-xl font-bold text-green-600">
+                        {vendasHoje.length}
+                      </div>
+                      <div className="text-sm text-green-700">Vendas</div>
+                    </div>
+                    <div className="p-3 bg-blue-50 rounded-lg">
+                      <div className="text-xl font-bold text-blue-600">
+                        R$ {ticketMedioHoje.toFixed(2)}
+                      </div>
+                      <div className="text-sm text-blue-700">Ticket Médio</div>
+                    </div>
+                  </div>
+                  
+                  {vendasHoje.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Últimas vendas:</h4>
+                      {vendasHoje.slice(0, 3).map((venda) => (
+                        <div key={venda.id} className="flex justify-between text-sm">
+                          <span>Comanda #{venda.comanda?.numero}</span>
+                          <span className="font-medium">R$ {venda.valor_final.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Ações Rápidas Adicionais */}
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <BarChart3 className="h-5 w-5" />
+                <ShoppingCart className="h-5 w-5" />
                 <span>Ações Rápidas</span>
               </CardTitle>
             </CardHeader>
@@ -465,7 +588,7 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Alertas de Estoque (apenas para admin e estoque) */}
+        {/* Alertas de Estoque */}
         {insumosEstoqueBaixo.length > 0 && !loading && (
           <Card className="border-yellow-200 bg-yellow-50 hover:shadow-md transition-shadow">
             <CardHeader>
@@ -495,10 +618,10 @@ const Dashboard = () => {
                     </div>
                     <div className="text-right">
                       <div className="text-sm font-medium text-yellow-800">
-                        {insumo.quantidade_estoque} {insumo.unidade}
+                        {insumo.saldo_atual} {insumo.unidade}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        Mín: {insumo.estoque_minimo} {insumo.unidade}
+                        Mín: {insumo.quantidade_minima} {insumo.unidade}
                       </div>
                     </div>
                   </div>
@@ -508,6 +631,50 @@ const Dashboard = () => {
                     E mais {insumosEstoqueBaixo.length - 5} insumos...
                   </p>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Status do Turno */}
+        {turnoAtivo && (
+          <Card className="bg-green-50 border-green-200 hover:shadow-md transition-shadow">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center space-x-2 text-green-800">
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span>Turno Ativo</span>
+                </CardTitle>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/turnos">
+                    Gerenciar
+                    <ArrowRight className="h-3 w-3 ml-1" />
+                  </Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Operador:</span>
+                  <p className="font-medium">
+                    {turnoAtivo.operador_funcionario?.nome || turnoAtivo.operador?.nome_completo}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Valor Inicial:</span>
+                  <p className="font-medium">R$ {turnoAtivo.valor_inicial.toFixed(2)}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Início:</span>
+                  <p className="font-medium">
+                    {new Date(turnoAtivo.data_abertura).toLocaleTimeString("pt-BR")}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Vendas Hoje:</span>
+                  <p className="font-medium">R$ {totalVendasHoje.toFixed(2)}</p>
+                </div>
               </div>
             </CardContent>
           </Card>

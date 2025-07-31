@@ -22,19 +22,17 @@ import {
   ShoppingCart,
   DollarSign,
   User,
-  CreditCard
+  CreditCard,
+  AlertCircle
 } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { funcionariosSimplesService, type FuncionarioSimples } from "@/lib/funcionarios-simples";
-import { comandasService, vendasService, mesasService, pdvService } from "@/lib/database";
+import { comandasService, vendasService, mesasService, pdvService, turnosService } from "@/lib/database";
 
 const PDV = () => {
-  const [operadorSelecionado, setOperadorSelecionado] = useState<FuncionarioSimples | null>(null);
-  const [funcionariosCaixa, setFuncionariosCaixa] = useState<FuncionarioSimples[]>([]);
+  const [turnoAtivo, setTurnoAtivo] = useState<any>(null);
   const [comandasProntas, setComandasProntas] = useState<any[]>([]);
   const [comandaSelecionada, setComandaSelecionada] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-  const [dialogOperadorOpen, setDialogOperadorOpen] = useState(true);
   const [dialogFinalizarOpen, setDialogFinalizarOpen] = useState(false);
   const [formaPagamento, setFormaPagamento] = useState<string>("");
   const [valorDesconto, setValorDesconto] = useState<string>("0");
@@ -42,16 +40,21 @@ const PDV = () => {
 
   useEffect(() => {
     loadData();
+    
+    // Atualizar a cada 30 segundos
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [funcionariosData, comandasData] = await Promise.all([
-        funcionariosSimplesService.getByTipo('caixa'),
+      const [turnoAtivoData, comandasData] = await Promise.all([
+        turnosService.getTurnoAtivo(),
         pdvService.getComandasProntasParaFechamento()
       ]);
-      setFuncionariosCaixa(funcionariosData);
+      
+      setTurnoAtivo(turnoAtivoData);
       setComandasProntas(comandasData);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
@@ -62,18 +65,6 @@ const PDV = () => {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleSelecionarOperador = (funcionarioId: string) => {
-    const funcionario = funcionariosCaixa.find(f => f.id === funcionarioId);
-    if (funcionario) {
-      setOperadorSelecionado(funcionario);
-      setDialogOperadorOpen(false);
-      toast({
-        title: "Operador selecionado",
-        description: `${funcionario.nome} está operando o PDV.`
-      });
     }
   };
 
@@ -94,10 +85,10 @@ const PDV = () => {
   };
 
   const handleFinalizarVenda = async () => {
-    if (!operadorSelecionado) {
+    if (!turnoAtivo) {
       toast({
         title: "Erro",
-        description: "Nenhum operador selecionado.",
+        description: "Nenhum turno ativo encontrado. Abra um turno primeiro.",
         variant: "destructive"
       });
       return;
@@ -132,7 +123,8 @@ const PDV = () => {
 
       await vendasService.create({
         comanda_id: comandaSelecionada.id,
-        operador_id: operadorSelecionado.id,
+        turno_id: turnoAtivo.id,
+        operador_id: turnoAtivo.operador_funcionario_id || turnoAtivo.operador_id,
         valor_total: subtotal,
         valor_desconto: desconto,
         valor_final: total,
@@ -178,6 +170,38 @@ const PDV = () => {
     );
   }
 
+  if (!turnoAtivo) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-4 lg:space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 lg:gap-4">
+            <div className="flex-1">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold flex items-center space-x-2">
+                <ShoppingCart className="h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10" />
+                <span>PDV - Ponto de Venda</span>
+              </h1>
+            </div>
+          </div>
+
+          <Card className="bg-yellow-50 border-yellow-200">
+            <CardContent className="p-6 text-center">
+              <AlertCircle className="h-12 w-12 text-yellow-600 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+                Nenhum turno ativo
+              </h3>
+              <p className="text-yellow-700 mb-4">
+                É necessário abrir um turno na área de Turnos para operar o PDV.
+              </p>
+              <Button asChild>
+                <a href="/turnos">Ir para Turnos</a>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-4 lg:space-y-6">
@@ -188,21 +212,15 @@ const PDV = () => {
               <ShoppingCart className="h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10" />
               <span>PDV - Ponto de Venda</span>
             </h1>
-            {operadorSelecionado && (
-              <div className="flex items-center space-x-2 mt-2">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  Operador: <strong>{operadorSelecionado.nome}</strong>
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setDialogOperadorOpen(true)}
-                >
-                  Trocar Operador
-                </Button>
-              </div>
-            )}
+            <div className="flex items-center space-x-2 mt-2">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                Operador: <strong>
+                  {turnoAtivo.operador_funcionario?.nome || turnoAtivo.operador?.nome_completo}
+                </strong>
+              </span>
+              <Badge variant="secondary">Turno Ativo</Badge>
+            </div>
           </div>
         </div>
 
@@ -336,7 +354,6 @@ const PDV = () => {
                       className="w-full"
                       size="lg"
                       onClick={() => setDialogFinalizarOpen(true)}
-                      disabled={!operadorSelecionado}
                     >
                       <CreditCard className="h-4 w-4 mr-2" />
                       Finalizar Venda
@@ -347,54 +364,6 @@ const PDV = () => {
             </Card>
           </div>
         </div>
-
-        {/* Dialog Selecionar Operador */}
-        <Dialog open={dialogOperadorOpen} onOpenChange={() => {}}>
-          <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
-            <DialogHeader>
-              <DialogTitle>Selecione o Operador do PDV</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Selecione o funcionário que irá operar o PDV:
-              </p>
-              
-              {funcionariosCaixa.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">
-                    Nenhum funcionário de caixa ativo encontrado.
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Cadastre funcionários na tela de Gerenciar Funcionários.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid gap-2">
-                  {funcionariosCaixa.map((funcionario) => (
-                    <Button
-                      key={funcionario.id}
-                      variant="outline"
-                      className="justify-start h-auto p-4"
-                      onClick={() => handleSelecionarOperador(funcionario.id)}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                          <User className="h-5 w-5 text-primary" />
-                        </div>
-                        <div className="text-left">
-                          <div className="font-medium">{funcionario.nome}</div>
-                          <div className="text-sm text-muted-foreground">
-                            Operador de Caixa
-                          </div>
-                        </div>
-                      </div>
-                    </Button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
 
         {/* Dialog Finalizar Venda */}
         <Dialog open={dialogFinalizarOpen} onOpenChange={setDialogFinalizarOpen}>

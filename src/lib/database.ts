@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { funcionariosService } from './funcionarios';
 import { funcionariosSimplesService } from './funcionarios-simples';
+import { insumosEstoqueService } from './estoque';
 import type { 
   Profile, 
   Mesa, 
@@ -527,7 +528,7 @@ export const pdvService = {
           produto:produtos(*)
         )
       `)
-      .in('status', ['pronto_para_fechamento', 'aberta', 'em_preparo'])
+      .in('status', ['pronto_para_fechamento', 'fechada', 'aguardando_pagamento'])
       .order('created_at');
     
     if (error) throw error;
@@ -553,7 +554,7 @@ export const insumosService = {
       .from('insumos')
       .select('*')
       .eq('ativo', true)
-      .filter('quantidade_estoque', 'lte', 'estoque_minimo')
+      .filter('saldo_atual', 'lte', 'quantidade_minima')
       .order('nome');
     
     if (error) throw error;
@@ -581,6 +582,15 @@ export const insumosService = {
     
     if (error) throw error;
     return data as Insumo;
+  },
+
+  async delete(id: string) {
+    const { error } = await supabase
+      .from('insumos')
+      .update({ ativo: false })
+      .eq('id', id);
+    
+    if (error) throw error;
   }
 };
 
