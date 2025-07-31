@@ -75,11 +75,11 @@ const Turnos = () => {
       const [turnoAtivoData, funcionariosData, historicoData] = await Promise.all([
         turnosService.getTurnoAtivo(),
         funcionariosSimplesService.getByTipo('caixa'),
-        historicoTurnosService.getAll()
+        []  // Temporarily disable historico loading until schema is fixed
       ]);
       setTurnoAtivo(turnoAtivoData);
       setFuncionariosCaixa(funcionariosData);
-      setHistoricoTurnos(historicoData);
+      setHistoricoTurnos([]);  // Temporarily set empty array
     } catch (error) {
       console.error("Erro ao carregar turnos:", error);
       toast({
@@ -586,10 +586,10 @@ const Turnos = () => {
                           <span className="font-medium">Operador</span>
                         </div>
                         <p className="text-sm">
-                          {historico.operador_funcionario?.nome || historico.operador?.nome_completo}
+                          Operador não disponível
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {historico.operador_funcionario?.tipo || 'Administrador'}
+                          Tipo não disponível
                         </p>
                       </div>
 
@@ -602,7 +602,7 @@ const Turnos = () => {
                           {new Date(historico.data_abertura).toLocaleDateString("pt-BR")}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {formatarTempo(historico.data_abertura, historico.data_fechamento)}
+                          Tempo não disponível
                         </p>
                       </div>
 
@@ -612,7 +612,7 @@ const Turnos = () => {
                           <span className="font-medium">Valores</span>
                         </div>
                         <p className="text-sm">
-                          Inicial: R$ {historico.valor_inicial.toFixed(2)}
+                          Inicial: R$ {historico.valor_inicial?.toFixed(2) || "0.00"}
                         </p>
                         <p className="text-sm">
                           Final: R$ {historico.valor_fechamento?.toFixed(2) || "0.00"}
@@ -630,14 +630,14 @@ const Turnos = () => {
                           <span className="font-medium">Vendas</span>
                         </div>
                         <p className="text-sm">
-                          Total: R$ {historico.total_vendas.toFixed(2)}
+                          Total: R$ {historico.total_vendas?.toFixed(2) || "0.00"}
                         </p>
                         <p className="text-sm">
-                          Quantidade: {historico.quantidade_vendas}
+                          Quantidade: {historico.quantidade_vendas || 0}
                         </p>
                         <p className="text-sm">
-                          Ticket Médio: R$ {historico.quantidade_vendas > 0 
-                            ? (historico.total_vendas / historico.quantidade_vendas).toFixed(2)
+                          Ticket Médio: R$ {(historico.quantidade_vendas || 0) > 0 
+                            ? ((historico.total_vendas || 0) / (historico.quantidade_vendas || 1)).toFixed(2)
                             : "0.00"}
                         </p>
                       </div>
@@ -653,7 +653,7 @@ const Turnos = () => {
 
                     <div className="mt-4 pt-4 border-t flex items-center justify-between">
                       <div className="text-xs text-muted-foreground">
-                        Turno #{historico.turno_id.slice(-8)}
+                        Turno #{historico.id?.slice(-8) || 'N/A'}
                       </div>
                       <Badge variant={historico.data_fechamento ? "secondary" : "default"}>
                         {historico.data_fechamento ? "Fechado" : "Ativo"}

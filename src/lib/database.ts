@@ -528,7 +528,7 @@ export const pdvService = {
           produto:produtos(*)
         )
       `)
-      .in('status', ['pronto_para_fechamento', 'fechada', 'aguardando_pagamento'])
+      .in('status', ['pronto_para_fechamento', 'fechada'])
       .order('created_at');
     
     if (error) throw error;
@@ -554,7 +554,7 @@ export const insumosService = {
       .from('insumos')
       .select('*')
       .eq('ativo', true)
-      .filter('saldo_atual', 'lte', 'quantidade_minima')
+      .filter('quantidade_estoque', 'lte', 'estoque_minimo')
       .order('nome');
     
     if (error) throw error;

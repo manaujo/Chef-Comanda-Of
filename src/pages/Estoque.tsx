@@ -316,7 +316,7 @@ const Estoque = () => {
   }
 
   const valorTotalEstoque = insumos.reduce(
-    (total, insumo) => total + (insumo.saldo_atual * insumo.preco_unitario),
+    (total, insumo) => total + (insumo.quantidade_estoque * insumo.preco_unitario),
     0
   );
 
@@ -355,12 +355,12 @@ const Estoque = () => {
                     <div>
                       <div className="font-medium text-red-800">{insumo.nome}</div>
                       <div className="text-sm text-red-600">
-                        Atual: {insumo.saldo_atual} {insumo.unidade}
+                        Atual: {insumo.quantidade_estoque} {insumo.unidade}
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="text-sm text-red-600">
-                        Mín: {insumo.quantidade_minima} {insumo.unidade}
+                        Mín: {insumo.estoque_minimo} {insumo.unidade}
                       </div>
                     </div>
                   </div>
@@ -545,7 +545,7 @@ const Estoque = () => {
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">{insumo.nome}</CardTitle>
-                      {insumo.saldo_atual <= insumo.quantidade_minima && (
+                      {insumo.quantidade_estoque <= insumo.estoque_minimo && (
                         <Badge variant="destructive">
                           <AlertTriangle className="h-3 w-3 mr-1" />
                           Baixo
@@ -558,13 +558,13 @@ const Estoque = () => {
                       <div>
                         <span className="text-muted-foreground">Saldo:</span>
                         <p className="font-medium">
-                          {insumo.saldo_atual} {insumo.unidade}
+                          {insumo.quantidade_estoque} {insumo.unidade}
                         </p>
                       </div>
                       <div>
                         <span className="text-muted-foreground">Mínimo:</span>
                         <p className="font-medium">
-                          {insumo.quantidade_minima} {insumo.unidade}
+                          {insumo.estoque_minimo} {insumo.unidade}
                         </p>
                       </div>
                       <div>
@@ -574,7 +574,7 @@ const Estoque = () => {
                       <div>
                         <span className="text-muted-foreground">Valor Total:</span>
                         <p className="font-medium">
-                          R$ {(insumo.saldo_atual * insumo.preco_unitario).toFixed(2)}
+                          R$ {(insumo.quantidade_estoque * insumo.preco_unitario).toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -743,10 +743,10 @@ const Estoque = () => {
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium">{entrada.insumo?.nome}</h4>
+                        <h4 className="font-medium">Entrada de Estoque</h4>
                         <p className="text-sm text-muted-foreground">
-                          {entrada.quantidade} {entrada.insumo?.unidade} • 
-                          R$ {entrada.valor_unitario.toFixed(4)} por {entrada.insumo?.unidade}
+                          Quantidade: {entrada.quantidade} • 
+                          R$ {entrada.valor_unitario?.toFixed(4) || '0.00'} por unidade
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(entrada.data_entrada).toLocaleString("pt-BR")}
@@ -798,9 +798,9 @@ const Estoque = () => {
                           <SelectValue placeholder="Selecione um insumo" />
                         </SelectTrigger>
                         <SelectContent>
-                          {insumos.filter(i => i.saldo_atual > 0).map((insumo) => (
+                          {insumos.filter(i => i.quantidade_estoque > 0).map((insumo) => (
                             <SelectItem key={insumo.id} value={insumo.id}>
-                              {insumo.nome} (Saldo: {insumo.saldo_atual} {insumo.unidade})
+                              {insumo.nome} (Saldo: {insumo.quantidade_estoque} {insumo.unidade})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -880,9 +880,9 @@ const Estoque = () => {
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium">{saida.insumo?.nome}</h4>
+                        <h4 className="font-medium">Saída de Estoque</h4>
                         <p className="text-sm text-muted-foreground">
-                          {saida.quantidade} {saida.insumo?.unidade} • 
+                          Quantidade: {saida.quantidade} • 
                           Motivo: {saida.motivo}
                         </p>
                         <p className="text-xs text-muted-foreground">
@@ -958,7 +958,7 @@ const Estoque = () => {
                       <div
                         key={insumo.id}
                         className={`flex items-center justify-between p-3 rounded-lg border ${
-                          insumo.saldo_atual <= insumo.quantidade_minima
+                          insumo.quantidade_estoque <= insumo.estoque_minimo
                             ? "bg-red-50 border-red-200"
                             : "bg-muted/50"
                         }`}
@@ -971,13 +971,13 @@ const Estoque = () => {
                         </div>
                         <div className="text-right">
                           <div className="font-bold">
-                            {insumo.saldo_atual} {insumo.unidade}
+                            {insumo.quantidade_estoque} {insumo.unidade}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            Mín: {insumo.quantidade_minima} {insumo.unidade}
+                            Mín: {insumo.estoque_minimo} {insumo.unidade}
                           </div>
                           <div className="text-sm font-medium">
-                            R$ {(insumo.saldo_atual * insumo.preco_unitario).toFixed(2)}
+                            R$ {(insumo.quantidade_estoque * insumo.preco_unitario).toFixed(2)}
                           </div>
                         </div>
                       </div>

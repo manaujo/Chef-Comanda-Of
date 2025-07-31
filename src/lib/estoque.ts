@@ -126,10 +126,7 @@ export const entradasEstoqueService = {
   async getAll() {
     const { data, error } = await supabase
       .from('entradas_estoque')
-      .select(`
-        *,
-        insumo:insumos(*)
-      `)
+      .select('*')
       .order('data_entrada', { ascending: false });
     
     if (error) throw error;
@@ -139,10 +136,7 @@ export const entradasEstoqueService = {
   async getByPeriodo(dataInicio: string, dataFim: string) {
     const { data, error } = await supabase
       .from('entradas_estoque')
-      .select(`
-        *,
-        insumo:insumos(*)
-      `)
+      .select('*')
       .gte('data_entrada', dataInicio)
       .lte('data_entrada', dataFim)
       .order('data_entrada', { ascending: false });
@@ -155,10 +149,7 @@ export const entradasEstoqueService = {
     const { data, error } = await supabase
       .from('entradas_estoque')
       .insert(entrada)
-      .select(`
-        *,
-        insumo:insumos(*)
-      `)
+      .select('*')
       .single();
     
     if (error) throw error;
@@ -171,10 +162,7 @@ export const saidasEstoqueService = {
   async getAll() {
     const { data, error } = await supabase
       .from('saidas_estoque')
-      .select(`
-        *,
-        insumo:insumos(*)
-      `)
+      .select('*')
       .order('data_saida', { ascending: false });
     
     if (error) throw error;
@@ -184,10 +172,7 @@ export const saidasEstoqueService = {
   async getByPeriodo(dataInicio: string, dataFim: string) {
     const { data, error } = await supabase
       .from('saidas_estoque')
-      .select(`
-        *,
-        insumo:insumos(*)
-      `)
+      .select('*')
       .gte('data_saida', dataInicio)
       .lte('data_saida', dataFim)
       .order('data_saida', { ascending: false });
@@ -200,10 +185,7 @@ export const saidasEstoqueService = {
     const { data, error } = await supabase
       .from('saidas_estoque')
       .insert(saida)
-      .select(`
-        *,
-        insumo:insumos(*)
-      `)
+      .select('*')
       .single();
     
     if (error) throw error;
@@ -216,10 +198,7 @@ export const produtoInsumosService = {
   async getByProduto(produtoId: string) {
     const { data, error } = await supabase
       .from('produto_insumos')
-      .select(`
-        *,
-        insumo:insumos(*)
-      `)
+      .select('*')
       .eq('produto_id', produtoId);
     
     if (error) throw error;
@@ -230,10 +209,7 @@ export const produtoInsumosService = {
     const { data, error } = await supabase
       .from('produto_insumos')
       .insert(produtoInsumo)
-      .select(`
-        *,
-        insumo:insumos(*)
-      `)
+      .select('*')
       .single();
     
     if (error) throw error;
@@ -245,10 +221,7 @@ export const produtoInsumosService = {
       .from('produto_insumos')
       .update(updates)
       .eq('id', id)
-      .select(`
-        *,
-        insumo:insumos(*)
-      `)
+      .select('*')
       .single();
     
     if (error) throw error;
@@ -269,12 +242,9 @@ export const produtoInsumosService = {
 export const historicoTurnosService = {
   async getAll() {
     const { data, error } = await supabase
-      .from('historico_turnos')
-      .select(`
-        *,
-        operador:profiles(*),
-        operador_funcionario:funcionarios_simples(*)
-      `)
+      .from('turnos')
+      .select('*')
+      .eq('ativo', false)
       .order('data_abertura', { ascending: false });
     
     if (error) throw error;
@@ -283,12 +253,9 @@ export const historicoTurnosService = {
 
   async getByPeriodo(dataInicio: string, dataFim: string) {
     const { data, error } = await supabase
-      .from('historico_turnos')
-      .select(`
-        *,
-        operador:profiles(*),
-        operador_funcionario:funcionarios_simples(*)
-      `)
+      .from('turnos')
+      .select('*')
+      .eq('ativo', false)
       .gte('data_abertura', dataInicio)
       .lte('data_abertura', dataFim)
       .order('data_abertura', { ascending: false });
