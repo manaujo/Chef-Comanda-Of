@@ -9,6 +9,7 @@ export interface Insumo {
   preco_unitario: number;
   fornecedor?: string;
   ativo: boolean;
+  user_id: string;
   created_at: string;
   updated_at: string;
 }
@@ -21,6 +22,7 @@ export interface EntradaEstoque {
   valor_unitario: number;
   observacoes?: string;
   data_entrada: string;
+  user_id: string;
   created_at: string;
   insumo?: Insumo;
 }
@@ -32,6 +34,7 @@ export interface SaidaEstoque {
   motivo: string;
   observacoes?: string;
   data_saida: string;
+  user_id: string;
   created_at: string;
   insumo?: Insumo;
 }
@@ -41,6 +44,7 @@ export interface ProdutoInsumo {
   produto_id: string;
   insumo_id: string;
   quantidade_usada: number;
+  user_id: string;
   created_at: string;
   insumo?: Insumo;
 }
@@ -58,6 +62,7 @@ export interface HistoricoTurno {
   quantidade_vendas: number;
   diferenca?: number;
   observacoes?: string;
+  user_id: string;
   created_at: string;
   operador?: any;
   operador_funcionario?: any;
@@ -70,6 +75,7 @@ export const insumosEstoqueService = {
       .from('insumos')
       .select('*')
       .eq('ativo', true)
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('nome');
     
     if (error) throw error;
@@ -82,6 +88,7 @@ export const insumosEstoqueService = {
       .select('*')
       .eq('ativo', true)
       .filter('saldo_atual', 'lt', 'quantidade_minima')
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('nome');
     
     if (error) throw error;
@@ -89,9 +96,12 @@ export const insumosEstoqueService = {
   },
 
   async create(insumo: Omit<Insumo, 'id' | 'created_at' | 'updated_at'>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('insumos')
-      .insert(insumo)
+      .insert({ ...insumo, user_id: user.id })
       .select()
       .single();
     
@@ -127,6 +137,7 @@ export const entradasEstoqueService = {
     const { data, error } = await supabase
       .from('entradas_estoque')
       .select('*')
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('data_entrada', { ascending: false });
     
     if (error) throw error;
@@ -139,6 +150,7 @@ export const entradasEstoqueService = {
       .select('*')
       .gte('data_entrada', dataInicio)
       .lte('data_entrada', dataFim)
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('data_entrada', { ascending: false });
     
     if (error) throw error;
@@ -146,9 +158,12 @@ export const entradasEstoqueService = {
   },
 
   async create(entrada: Omit<EntradaEstoque, 'id' | 'valor_unitario' | 'created_at'>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('entradas_estoque')
-      .insert(entrada)
+      .insert({ ...entrada, user_id: user.id })
       .select('*')
       .single();
     
@@ -163,6 +178,7 @@ export const saidasEstoqueService = {
     const { data, error } = await supabase
       .from('saidas_estoque')
       .select('*')
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('data_saida', { ascending: false });
     
     if (error) throw error;
@@ -175,6 +191,7 @@ export const saidasEstoqueService = {
       .select('*')
       .gte('data_saida', dataInicio)
       .lte('data_saida', dataFim)
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('data_saida', { ascending: false });
     
     if (error) throw error;
@@ -182,11 +199,14 @@ export const saidasEstoqueService = {
   },
 
   async create(saida: Omit<SaidaEstoque, 'id' | 'created_at'>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('saidas_estoque')
-      .insert(saida)
+      .insert({ ...saida, user_id: user.id })
       .select('*')
-      .single();
+      .single()
     
     if (error) throw error;
     return data as SaidaEstoque;
@@ -199,16 +219,20 @@ export const produtoInsumosService = {
     const { data, error } = await supabase
       .from('produto_insumos')
       .select('*')
-      .eq('produto_id', produtoId);
+      .eq('produto_id', produtoId)
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
     
     if (error) throw error;
     return data as ProdutoInsumo[];
   },
 
   async create(produtoInsumo: Omit<ProdutoInsumo, 'id' | 'created_at'>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('produto_insumos')
-      .insert(produtoInsumo)
+      .insert({ ...produtoInsumo, user_id: user.id })
       .select('*')
       .single();
     
@@ -245,6 +269,7 @@ export const historicoTurnosService = {
       .from('turnos')
       .select('*')
       .eq('ativo', false)
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('data_abertura', { ascending: false });
     
     if (error) throw error;
@@ -258,6 +283,7 @@ export const historicoTurnosService = {
       .eq('ativo', false)
       .gte('data_abertura', dataInicio)
       .lte('data_abertura', dataFim)
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('data_abertura', { ascending: false });
     
     if (error) throw error;

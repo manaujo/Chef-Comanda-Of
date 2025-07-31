@@ -28,6 +28,7 @@ export const profilesService = {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
+      .eq('id', (await supabase.auth.getUser()).data.user?.id)
       .order('nome_completo');
     
     if (error) throw error;
@@ -85,6 +86,7 @@ export const categoriasService = {
       .from('categorias')
       .select('*')
       .eq('ativo', true)
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('nome');
     
     if (error) throw error;
@@ -92,9 +94,12 @@ export const categoriasService = {
   },
 
   async create(categoria: Omit<Categoria, 'id' | 'created_at' | 'updated_at'>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('categorias')
-      .insert(categoria)
+      .insert({ ...categoria, user_id: user.id })
       .select()
       .single();
     
@@ -134,6 +139,7 @@ export const produtosService = {
         categoria:categorias(*)
       `)
       .eq('ativo', true)
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('nome');
     
     if (error) throw error;
@@ -148,6 +154,7 @@ export const produtosService = {
         categoria:categorias(*)
       `)
       .eq('ativo', true)
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('nome');
     
     if (error) throw error;
@@ -162,6 +169,7 @@ export const produtosService = {
         categoria:categorias(*)
       `)
       .eq('id', id)
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .single();
     
     if (error) throw error;
@@ -169,9 +177,12 @@ export const produtosService = {
   },
 
   async create(produto: Omit<Produto, 'id' | 'created_at' | 'updated_at'>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('produtos')
-      .insert(produto)
+      .insert({ ...produto, user_id: user.id })
       .select(`
         *,
         categoria:categorias(*)
@@ -214,6 +225,7 @@ export const mesasService = {
       .from('mesas')
       .select('*')
       .eq('ativo', true)
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('numero');
     
     if (error) throw error;
@@ -225,6 +237,7 @@ export const mesasService = {
       .from('mesas')
       .select('*')
       .eq('id', id)
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .single();
     
     if (error) throw error;
@@ -232,9 +245,12 @@ export const mesasService = {
   },
 
   async create(mesa: Omit<Mesa, 'id' | 'created_at' | 'updated_at' | 'qr_code'>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('mesas')
-      .insert(mesa)
+      .insert({ ...mesa, user_id: user.id })
       .select()
       .single();
     
@@ -291,6 +307,7 @@ export const comandasService = {
           produto:produtos(*)
         )
       `)
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('created_at', { ascending: false });
     
     if (error) throw error;
@@ -311,6 +328,7 @@ export const comandasService = {
         )
       `)
       .eq('status', 'aberta')
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('created_at', { ascending: false });
     
     if (error) throw error;
@@ -332,6 +350,7 @@ export const comandasService = {
       `)
       .eq('mesa_id', mesaId)
       .in('status', ['aberta', 'em_preparo', 'pronto_para_fechamento'])
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('created_at', { ascending: false });
     
     if (error) throw error;
@@ -352,6 +371,7 @@ export const comandasService = {
         )
       `)
       .eq('id', id)
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .single();
     
     if (error) throw error;
@@ -359,10 +379,14 @@ export const comandasService = {
   },
 
   async create(comanda: Omit<Comanda, 'id' | 'numero' | 'created_at' | 'updated_at' | 'valor_total'>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('comandas')
       .insert({
-        ...comanda
+        ...comanda,
+        user_id: user.id
       })
       .select(`
         *,
@@ -412,9 +436,12 @@ export const comandasService = {
 // Itens da Comanda
 export const comandaItensService = {
   async create(item: Omit<ComandaItem, 'id' | 'created_at' | 'updated_at'>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('comanda_itens')
-      .insert(item)
+      .insert({ ...item, user_id: user.id })
       .select(`
         *,
         produto:produtos(*)
@@ -467,6 +494,7 @@ export const comandaItensService = {
         produto:produtos(*)
       `)
       .eq('comanda_id', comandaId)
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('created_at');
     
     if (error) throw error;
@@ -488,6 +516,7 @@ export const comandaItensService = {
       `)
       .eq('enviado_cozinha', true)
       .in('status', ['aguardando', 'preparando', 'pronto'])
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('created_at');
     
     if (error) throw error;
@@ -529,6 +558,7 @@ export const pdvService = {
         )
       `)
       .in('status', ['pronto_para_fechamento', 'fechada'])
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('created_at');
     
     if (error) throw error;
@@ -543,6 +573,7 @@ export const insumosService = {
       .from('insumos')
       .select('*')
       .eq('ativo', true)
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('nome');
     
     if (error) throw error;
@@ -555,6 +586,7 @@ export const insumosService = {
       .select('*')
       .eq('ativo', true)
       .filter('quantidade_estoque', 'lte', 'estoque_minimo')
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('nome');
     
     if (error) throw error;
@@ -562,9 +594,12 @@ export const insumosService = {
   },
 
   async create(insumo: Omit<Insumo, 'id' | 'created_at' | 'updated_at'>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('insumos')
-      .insert(insumo)
+      .insert({ ...insumo, user_id: user.id })
       .select()
       .single();
     
@@ -606,6 +641,7 @@ export const turnosService = {
       `)
       .eq('ativo', true)
       .is('data_fechamento', null)
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .single();
     
     if (error && error.code !== 'PGRST116') throw error;
@@ -613,12 +649,16 @@ export const turnosService = {
   },
 
   async abrir(operador_id: string, valor_inicial: number) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('turnos')
       .insert({
         operador_id,
         valor_inicial,
-        ativo: true
+        ativo: true,
+        user_id: user.id
       })
       .select(`
         *,
@@ -631,13 +671,17 @@ export const turnosService = {
   },
 
   async abrirComFuncionario(operador_id: string, operador_funcionario_id: string, valor_inicial: number) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('turnos')
       .insert({
         operador_id,
         operador_funcionario_id,
         valor_inicial,
-        ativo: true
+        ativo: true,
+        user_id: user.id
       })
       .select(`
         *,
@@ -675,9 +719,12 @@ export const turnosService = {
 // Vendas
 export const vendasService = {
   async create(venda: Omit<Venda, 'id' | 'created_at'>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('vendas')
-      .insert(venda)
+      .insert({ ...venda, user_id: user.id })
       .select(`
         *,
         comanda:comandas(*),
@@ -700,6 +747,7 @@ export const vendasService = {
       `)
       .gte('data_venda', dataInicio)
       .lte('data_venda', dataFim)
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .order('data_venda', { ascending: false });
     
     if (error) throw error;
@@ -710,9 +758,12 @@ export const vendasService = {
 // Logs
 export const logsService = {
   async create(log: Omit<Log, 'id' | 'created_at'>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('logs')
-      .insert(log)
+      .insert({ ...log, user_id_owner: user.id })
       .select()
       .single();
     
@@ -727,6 +778,7 @@ export const logsService = {
         *,
         usuario:profiles(*)
       `)
+      .eq('user_id_owner', (await supabase.auth.getUser()).data.user?.id)
       .order('created_at', { ascending: false })
       .limit(limit);
     
