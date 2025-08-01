@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { getCurrentUser } from '@/lib/auth'
 
 export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -11,7 +12,13 @@ export const useAuth = () => {
     const checkSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        setUser(session?.user ?? null);
+        if (session?.user) {
+          // Buscar dados completos do usuário
+          const userData = await getCurrentUser();
+          setUser(userData);
+        } else {
+          setUser(null);
+        }
       } catch (error) {
         console.error('Error checking session:', error);
         setUser(null);
@@ -24,8 +31,18 @@ export const useAuth = () => {
 
     // Escutar mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
+      async (_event, session) => {
+        if (session?.user) {
+          try {
+            const userData = await getCurrentUser();
+            setUser(userData);
+          } catch (error) {
+            console.error('Error getting user data:', error);
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
         setLoading(false);
       }
     );
@@ -34,41 +51,83 @@ export const useAuth = () => {
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-    return { data, error }
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        return { data: null, error };
+      }
+      
+      // Buscar dados completos do usuário após login
+      if (data.user) {
+        const userData = await getCurrentUser();
+        setUser(userData);
+      }
+      
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error in signIn:', error);
+      return { data: null, error };
+    }
   }
 
   const signUp = async (email: string, password: string, userData: any) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    })
-
-    if (data.user && !error) {
-      // Criar empresa após registro
-      const { error: empresaError } = await supabase
-        .from('empresas')
-        .insert([
-          {
-            nome: userData.nomeRestaurante,
-            user_id: data.user.id,
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            nome_completo: userData.nomeCompleto,
+            nome_restaurante: userData.nomeRestaurante,
+            cpf: userData.cpf,
+            telefone: userData.telefone
           }
-        ])
+        }
+      });
       
-      if (empresaError) {
-        console.error('Erro ao criar empresa:', empresaError)
+      if (error) {
+        return { data: null, error };
       }
-    }
+      
+      // Criar perfil do usuário
+      if (data.user) {
+        const { error: profileError } = await supabase.from("profiles").insert([
+          {
+            id: data.user.id,
+            email: email,
+            nome_completo: userData.nomeCompleto,
+            nome_restaurante: userData.nomeRestaurante,
+            cpf: userData.cpf,
+            telefone: userData.telefone,
+            tipo: 'administrador'
+          }
+        ]);
+        
+        if (profileError) {
+          console.error('Erro ao criar perfil:', profileError);
+        }
+      }
 
-    return { data, error }
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error in signUp:', error);
+      return { data: null, error };
+    }
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    return { error }
+    try {
+      const { error } = await supabase.auth.signOut();
+      setUser(null);
+      return { error };
+    } catch (error) {
+      console.error('Error in signOut:', error);
+      return { error };
+    }
   }
 
   return {

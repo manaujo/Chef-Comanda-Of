@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 
 const Login = () => {
-  const { signIn, user } = useAuth();
+  const { signIn, user, loading } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -19,15 +19,26 @@ const Login = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Add a small delay to prevent navigation throttling
-    if (user) {
+    // Só redirecionar se não estiver carregando e o usuário estiver autenticado
+    if (!loading && user) {
       const timer = setTimeout(() => {
         navigate('/dashboard');
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [user, navigate]);
+  }, [user, loading, navigate]);
 
+  // Mostrar loading enquanto verifica autenticação
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-primary/5">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Verificando autenticação...</p>
+        </div>
+      </div>
+    );
+  }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -40,14 +51,14 @@ const Login = () => {
         description: error.message,
         variant: "destructive",
       });
+      setIsLoading(false);
     } else {
-      // Add delay to prevent navigation throttling
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 100);
+      toast({
+        title: "Login realizado",
+        description: "Redirecionando para o dashboard...",
+      });
+      // O redirecionamento será feito pelo useEffect
     }
-    
-    setIsLoading(false);
   };
 
   return (

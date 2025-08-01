@@ -26,7 +26,7 @@ const Dashboard = () => {
         .from('empresas')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (data) {
         setEmpresa(data);
