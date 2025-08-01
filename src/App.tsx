@@ -19,6 +19,7 @@ import Relatorios from "./pages/Relatorios";
 import Funcionarios from "./pages/Funcionarios";
 import GerenciarFuncionarios from "./pages/GerenciarFuncionarios";
 import Configuracoes from "./pages/Configuracoes";
+import Diagnostico from "./pages/Diagnostico";
 import AcessoNegado from "./pages/AcessoNegado";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -143,6 +144,14 @@ const App = () => (
             element={
               <ProtectedRoute requireAdmin={true}>
                 <Configuracoes />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/diagnostico"
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <Diagnostico />
               </ProtectedRoute>
             }
           />

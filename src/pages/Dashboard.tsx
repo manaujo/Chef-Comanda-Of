@@ -22,12 +22,14 @@ import {
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import {
   mesasService,
   comandasService,
   vendasService,
   turnosService
 } from "@/lib/database";
+import { databaseUtils } from "@/lib/database-utils";
 import { insumosEstoqueService } from "@/lib/estoque";
 import type { Mesa, Comanda, Venda, Turno } from "@/types/database";
 
@@ -40,6 +42,7 @@ const Dashboard = () => {
   const [turnoAtivo, setTurnoAtivo] = useState<Turno | null>(null);
   const [insumosEstoqueBaixo, setInsumosEstoqueBaixo] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     loadDashboardData();
@@ -90,6 +93,44 @@ const Dashboard = () => {
     }
   };
 
+  const handleDebugDatabase = async () => {
+    try {
+      const integrity = await databaseUtils.checkDataIntegrity();
+      toast({
+        title: "Integridade dos dados",
+        description: `Mesas: ${integrity.mesas}, Comandas: ${integrity.comandas}, Comandas Prontas: ${integrity.comandasProntas}`,
+      });
+      console.log('📊 Integridade completa:', integrity);
+    } catch (error) {
+      console.error('Erro ao verificar integridade:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao verificar integridade dos dados",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleResetTestData = async () => {
+    if (confirm('⚠️ ATENÇÃO: Isso irá remover TODOS os seus dados de teste. Continuar?')) {
+      try {
+        await databaseUtils.resetAllUserData();
+        await databaseUtils.createTestData();
+        toast({
+          title: "Dados resetados",
+          description: "Dados de teste resetados e recriados com sucesso",
+        });
+        loadDashboardData();
+      } catch (error) {
+        console.error('Erro ao resetar dados:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao resetar dados de teste",
+          variant: "destructive"
+        });
+      }
+    }
+  };
   const mesasOcupadas = mesas.filter(mesa => mesa.status === "ocupada").length;
   const mesasLivres = mesas.filter(mesa => mesa.status === "livre").length;
   const mesasProntas = mesas.filter(mesa => mesa.status === "fechada" || mesa.status === "aguardando_pagamento").length;
@@ -587,6 +628,40 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Debug Section - Apenas para desenvolvimento */}
+        {process.env.NODE_ENV === 'development' && (
+          <Card className="border-yellow-200 bg-yellow-50">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2 text-yellow-800">
+                <AlertTriangle className="h-5 w-5" />
+                <span>Debug - Desenvolvimento</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDebugDatabase}
+                >
+                  Verificar Integridade
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleResetTestData}
+                >
+                  Resetar Dados de Teste
+                </Button>
+              </div>
+              <p className="text-xs text-yellow-700">
+                Ferramentas de debug para resolver problemas no banco de dados.
+                Use com cuidado!
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Alertas de Estoque */}
         {insumosEstoqueBaixo.length > 0 && !loading && (

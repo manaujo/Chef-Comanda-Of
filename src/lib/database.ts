@@ -556,7 +556,9 @@ export const pdvService = {
           produto:produtos(*)
         )
       `)
-      .in('status', ['pronto_para_fechamento', 'fechada'])
+      .eq('user_id', user.id)
+      .in('status', ['pronto_para_fechamento', 'pronta'])
+      .gt('valor_total', 0)
       .order('created_at');
     
     if (error) throw error;
