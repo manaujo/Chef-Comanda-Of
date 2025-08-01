@@ -1,187 +1,72 @@
-import { useState, useEffect } from "react";
-import { supabase } from "../lib/supabase";
-import { getCurrentUser, User } from "../lib/auth";
-import { funcionariosAuthService, type Funcionario } from "../lib/funcionarios";
-
-export type UserType = "admin" | "funcionario";
-
-export interface AuthUser {
-  id: string;
-  email?: string;
-  nome: string;
-  tipo: UserType;
-  userData: User | Funcionario;
-}
+import { useState, useEffect } from 'react'
+import { User } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase'
 
 export const useAuth = () => {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Verificar usuário inicial
-    const initAuth = async () => {
-      try {
-        console.log("🔍 Iniciando verificação de autenticação...");
+    // Verificar sessão atual
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+      setLoading(false)
+    })
 
-        // Verificar se o Supabase está configurado
-        const {
-          data: { session }
-        } = await supabase.auth.getSession();
-        console.log("📋 Sessão atual:", session ? "Existe" : "Não existe");
-
-        if (session) {
-          console.log("👤 Usuário na sessão:", session.user.email);
-
-          // Tentar detectar se é administrador ou funcionário
-          const email = session.user.email;
-
-          if (email && !email.includes("@chefcomanda.com")) {
-            // É um administrador (email real)
-            console.log("👑 Detectado como administrador");
-            const userData = await getCurrentUser();
-            if (userData) {
-              setUser({
-                id: userData.id,
-                email: userData.email,
-                nome: userData.nome_completo,
-                tipo: "admin",
-                userData
-              });
-            }
-          } else {
-            // É um funcionário (email com @chefcomanda.com)
-            console.log("👷 Detectado como funcionário");
-            const funcionarioData = await funcionariosAuthService.getCurrentFuncionario();
-            if (funcionarioData) {
-              setUser({
-                id: funcionarioData.id,
-                nome: funcionarioData.nome,
-                tipo: "funcionario",
-                userData: funcionarioData
-              });
-            }
-          }
-        } else {
-          console.log("❌ Nenhuma sessão encontrada");
-          setUser(null);
-        }
-      } catch (error) {
-        console.error("💥 Erro na autenticação:", error);
-        setUser(null);
-      } finally {
-        setIsLoading(false);
+    // Escutar mudanças de autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null)
+        setLoading(false)
       }
-    };
+    )
 
-    initAuth();
+    return () => subscription.unsubscribe()
+  }, [])
 
-    // Escutar mudanças na autenticação
-    const {
-      data: { subscription }
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("🔄 Evento de autenticação:", event);
-      console.log("📧 Email do usuário:", session?.user?.email);
+  const signIn = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+    return { data, error }
+  }
 
-      if (event === "SIGNED_IN" && session?.user) {
-        try {
-          console.log("✅ Usuário logado, detectando tipo...");
-          const email = session.user.email;
+  const signUp = async (email: string, password: string, userData: any) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    })
 
-          if (email && !email.includes("@chefcomanda.com")) {
-            // É um administrador
-            console.log("👑 Detectado como administrador");
-            const userData = await getCurrentUser();
-            if (userData) {
-              setUser({
-                id: userData.id,
-                email: userData.email,
-                nome: userData.nome_completo,
-                tipo: "admin",
-                userData
-              });
-            }
-          } else {
-            // É um funcionário
-            console.log("👷 Detectado como funcionário");
-            const funcionarioData = await funcionariosAuthService.getCurrentFuncionario();
-            if (funcionarioData) {
-              setUser({
-                id: funcionarioData.id,
-                nome: funcionarioData.nome,
-                tipo: "funcionario",
-                userData: funcionarioData
-              });
-            }
+    if (data.user && !error) {
+      // Criar empresa após registro
+      const { error: empresaError } = await supabase
+        .from('empresas')
+        .insert([
+          {
+            nome: userData.nomeRestaurante,
+            user_id: data.user.id,
           }
-        } catch (error) {
-          console.error("💥 Erro ao buscar dados do usuário:", error);
-          setUser(null);
-        }
-      } else if (event === "SIGNED_OUT") {
-        console.log("🚪 Usuário desconectado");
-        setUser(null);
-      } else if (event === "INITIAL_SESSION" && session?.user) {
-        try {
-          console.log("🔄 Sessão inicial encontrada, detectando tipo...");
-          const email = session.user.email;
-
-          if (email && !email.includes("@chefcomanda.com")) {
-            // É um administrador
-            console.log("👑 Detectado como administrador");
-            const userData = await getCurrentUser();
-            if (userData) {
-              setUser({
-                id: userData.id,
-                email: userData.email,
-                nome: userData.nome_completo,
-                tipo: "admin",
-                userData
-              });
-            }
-          } else {
-            // É um funcionário
-            console.log("👷 Detectado como funcionário");
-            const funcionarioData = await funcionariosAuthService.getCurrentFuncionario();
-            if (funcionarioData) {
-              setUser({
-                id: funcionarioData.id,
-                nome: funcionarioData.nome,
-                tipo: "funcionario",
-                userData: funcionarioData
-              });
-            }
-          }
-        } catch (error) {
-          console.error("💥 Erro ao buscar dados da sessão inicial:", error);
-          setUser(null);
-        }
+        ])
+      
+      if (empresaError) {
+        console.error('Erro ao criar empresa:', empresaError)
       }
-      setIsLoading(false);
-    });
+    }
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+    return { data, error }
+  }
 
-  const isAuthenticated = !!user;
-  const isAdmin = user?.tipo === "admin";
-  const isFuncionario = user?.tipo === "funcionario";
-
-  console.log("🎯 Estado atual do useAuth:", {
-    user: !!user,
-    isLoading,
-    isAuthenticated,
-    tipo: user?.tipo,
-    isAdmin,
-    isFuncionario
-  });
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut()
+    return { error }
+  }
 
   return {
     user,
-    isLoading,
-    isAuthenticated,
-    isAdmin,
-    isFuncionario
-  };
-};
+    loading,
+    signIn,
+    signUp,
+    signOut,
+  }
+}

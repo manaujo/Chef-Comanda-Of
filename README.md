@@ -1,130 +1,73 @@
-# ChefComanda
+# Welcome to your Lovable project
 
-Sistema completo de gestão para restaurantes, bares e lanchonetes. Controle total do seu negócio em uma única plataforma.
+## Project info
 
-## 🚀 Funcionalidades
+**URL**: https://lovable.dev/projects/ab0c26ff-6b09-427b-9849-9b83ba563f48
 
-- ✅ **Autenticação com Supabase** - Login e registro seguros
-- ✅ **Dashboard Responsivo** - Interface moderna e intuitiva
-- ✅ **Gestão de Restaurantes** - Cadastro completo de estabelecimentos
-- 🔄 **Mesas e Comandas** - Em desenvolvimento
-- 🔄 **Controle de Produtos** - Em desenvolvimento
-- 🔄 **Relatórios** - Em desenvolvimento
-- 🔄 **Estoque** - Em desenvolvimento
+## How can I edit this code?
 
-## 🛠️ Tecnologias
+There are several ways of editing your application.
 
-- **Frontend**: React + TypeScript + Vite
-- **UI**: Tailwind CSS + shadcn/ui
-- **Backend**: Supabase (PostgreSQL + Auth)
-- **Roteamento**: React Router
-- **Estado**: React Query
+**Use Lovable**
 
-## 📦 Instalação
+Simply visit the [Lovable Project](https://lovable.dev/projects/ab0c26ff-6b09-427b-9849-9b83ba563f48) and start prompting.
 
-1. **Clone o repositório**
+Changes made via Lovable will be committed automatically to this repo.
 
-```bash
-git clone https://github.com/manaujo/chefcomanda-pro.git
-cd chefcomanda-pro
-```
+**Use your preferred IDE**
 
-2. **Instale as dependências**
+If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
 
-```bash
-npm install
-```
+The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-3. **Configure as variáveis de ambiente**
+Follow these steps:
 
-```bash
-cp env.example .env.local
-```
+```sh
+# Step 1: Clone the repository using the project's Git URL.
+git clone <YOUR_GIT_URL>
 
-Edite o arquivo `.env.local` com suas credenciais do Supabase:
+# Step 2: Navigate to the project directory.
+cd <YOUR_PROJECT_NAME>
 
-```env
-VITE_SUPABASE_URL=sua_url_do_supabase
-VITE_SUPABASE_ANON_KEY=sua_chave_anonima_do_supabase
-```
+# Step 3: Install the necessary dependencies.
+npm i
 
-4. **Configure o Supabase**
-
-### Criar projeto no Supabase
-
-1. Acesse [supabase.com](https://supabase.com)
-2. Crie um novo projeto
-3. Copie a URL e a chave anônima para o arquivo `.env.local`
-
-### Criar tabela de perfis
-
-Execute o seguinte SQL no SQL Editor do Supabase:
-
-```sql
--- Criar tabela de perfis
-CREATE TABLE profiles (
-  id UUID REFERENCES auth.users(id) PRIMARY KEY,
-  email TEXT UNIQUE NOT NULL,
-  nome_completo TEXT NOT NULL,
-  nome_restaurante TEXT NOT NULL,
-  cpf TEXT NOT NULL,
-  telefone TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Habilitar RLS
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-
--- Criar política para usuários verem apenas seus próprios dados
-CREATE POLICY "Usuários podem ver seus próprios dados" ON profiles
-  FOR SELECT USING (auth.uid() = id);
-
--- Criar política para usuários inserirem seus próprios dados
-CREATE POLICY "Usuários podem inserir seus próprios dados" ON profiles
-  FOR INSERT WITH CHECK (auth.uid() = id);
-
--- Criar política para usuários atualizarem seus próprios dados
-CREATE POLICY "Usuários podem atualizar seus próprios dados" ON profiles
-  FOR UPDATE USING (auth.uid() = id);
-```
-
-5. **Execute o projeto**
-
-```bash
+# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
 
-## 🔐 Autenticação
+**Edit a file directly in GitHub**
 
-O sistema utiliza Supabase Auth para autenticação segura:
+- Navigate to the desired file(s).
+- Click the "Edit" button (pencil icon) at the top right of the file view.
+- Make your changes and commit the changes.
 
-- **Registro**: Email, senha e dados do restaurante
-- **Login**: Email e senha
-- **Sessão**: Gerenciamento automático de sessão
-- **Logout**: Desconexão segura
+**Use GitHub Codespaces**
 
-## 📱 Como usar
+- Navigate to the main page of your repository.
+- Click on the "Code" button (green button) near the top right.
+- Select the "Codespaces" tab.
+- Click on "New codespace" to launch a new Codespace environment.
+- Edit files directly within the Codespace and commit and push your changes once you're done.
 
-1. **Registro**: Acesse `/registro` para criar uma conta
-2. **Login**: Acesse `/login` para entrar no sistema
-3. **Dashboard**: Após o login, você será redirecionado para `/dashboard`
+## What technologies are used for this project?
 
-## 🎨 Personalização
+This project is built with:
 
-O sistema usa Tailwind CSS com tema personalizado. As cores principais são:
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
 
-- **Primary**: Vermelho (#dc2626)
-- **Secondary**: Âmbar (#f59e0b)
-- **Background**: Gradientes suaves
+## How can I deploy this project?
 
-## 📄 Licença
+Simply open [Lovable](https://lovable.dev/projects/ab0c26ff-6b09-427b-9849-9b83ba563f48) and click on Share -> Publish.
 
-Este projeto está sob a licença MIT.
+## Can I connect a custom domain to my Lovable project?
 
-## 🤝 Contribuição
+Yes, you can!
 
-Contribuições são bem-vindas! Sinta-se à vontade para abrir issues e pull requests.
+To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
-## 📞 Suporte
-
-Para suporte, entre em contato através dos canais oficiais do projeto.
+Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
