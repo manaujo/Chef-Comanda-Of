@@ -13,9 +13,12 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Add delay to prevent navigation throttling
     if (!user) {
-      navigate('/login');
-      return;
+      const timer = setTimeout(() => {
+        navigate('/login');
+      }, 100);
+      return () => clearTimeout(timer);
     }
 
     const fetchEmpresa = async () => {

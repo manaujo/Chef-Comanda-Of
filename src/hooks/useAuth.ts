@@ -8,18 +8,27 @@ export const useAuth = () => {
 
   useEffect(() => {
     // Verificar sessão atual
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
+      } catch (error) {
+        console.error('Error checking session:', error);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    checkSession();
 
     // Escutar mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        setUser(session?.user ?? null)
-        setLoading(false)
+        setUser(session?.user ?? null);
+        setLoading(false);
       }
-    )
+    );
 
     return () => subscription.unsubscribe()
   }, [])

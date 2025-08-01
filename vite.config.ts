@@ -8,6 +8,12 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    hmr: {
+      port: 8080,
+    },
+    watch: {
+      usePolling: true,
+    },
   },
   plugins: [
     react(),
@@ -18,5 +24,8 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+  optimizeDeps: {
+    exclude: ['@supabase/supabase-js'],
   },
 }));

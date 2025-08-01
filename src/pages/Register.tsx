@@ -31,8 +31,12 @@ const Register = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Add a small delay to prevent navigation throttling
     if (user) {
-      navigate('/dashboard');
+      const timer = setTimeout(() => {
+        navigate('/dashboard');
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [user, navigate]);
 
