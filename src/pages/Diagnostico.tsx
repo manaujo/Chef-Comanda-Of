@@ -298,7 +298,7 @@ const Diagnostico = () => {
               <div className="space-y-2 text-sm font-mono">
                 <div className="bg-white p-2 rounded border">
                   <code>-- Verificar comandas prontas para PDV</code><br/>
-                  <code>SELECT * FROM comandas WHERE status = 'pronto_para_fechamento' AND valor_total > 0;</code>
+                  <code>SELECT * FROM comandas WHERE status = 'pronto_para_fechamento' AND valor_total {'>'} 0;</code>
                 </div>
                 
                 <div className="bg-white p-2 rounded border">
