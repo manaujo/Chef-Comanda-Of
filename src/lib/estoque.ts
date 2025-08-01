@@ -66,10 +66,14 @@ export interface HistoricoTurno {
 // Serviços para Insumos
 export const insumosEstoqueService = {
   async getAll() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('insumos')
       .select('*')
       .eq('ativo', true)
+      .eq('user_id', user.id)
       .order('nome');
     
     if (error) throw error;
@@ -77,18 +81,29 @@ export const insumosEstoqueService = {
   },
 
   async getEstoqueBaixo() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('insumos')
       .select('*')
       .eq('ativo', true)
-      .filter('saldo_atual', 'lt', 'quantidade_minima')
       .order('nome');
     
     if (error) throw error;
-    return data as Insumo[];
+    
+    // Filtrar no cliente para comparar saldo_atual com quantidade_minima
+    const estoqueBaixo = data.filter(insumo => 
+      (insumo.saldo_atual || 0) < (insumo.quantidade_minima || 0)
+    );
+    
+    return estoqueBaixo as Insumo[];
   },
 
   async create(insumo: Omit<Insumo, 'id' | 'created_at' | 'updated_at'>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('insumos')
       .insert(insumo)
@@ -124,6 +139,9 @@ export const insumosEstoqueService = {
 // Serviços para Entradas de Estoque
 export const entradasEstoqueService = {
   async getAll() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('entradas_estoque')
       .select('*')
@@ -134,6 +152,9 @@ export const entradasEstoqueService = {
   },
 
   async getByPeriodo(dataInicio: string, dataFim: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('entradas_estoque')
       .select('*')
@@ -146,6 +167,9 @@ export const entradasEstoqueService = {
   },
 
   async create(entrada: Omit<EntradaEstoque, 'id' | 'valor_unitario' | 'created_at'>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('entradas_estoque')
       .insert(entrada)
@@ -160,6 +184,9 @@ export const entradasEstoqueService = {
 // Serviços para Saídas de Estoque
 export const saidasEstoqueService = {
   async getAll() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('saidas_estoque')
       .select('*')
@@ -170,6 +197,9 @@ export const saidasEstoqueService = {
   },
 
   async getByPeriodo(dataInicio: string, dataFim: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('saidas_estoque')
       .select('*')
@@ -182,6 +212,9 @@ export const saidasEstoqueService = {
   },
 
   async create(saida: Omit<SaidaEstoque, 'id' | 'created_at'>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('saidas_estoque')
       .insert(saida)
@@ -241,6 +274,9 @@ export const produtoInsumosService = {
 // Serviços para Histórico de Turnos
 export const historicoTurnosService = {
   async getAll() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('turnos')
       .select('*')
@@ -252,6 +288,9 @@ export const historicoTurnosService = {
   },
 
   async getByPeriodo(dataInicio: string, dataFim: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('turnos')
       .select('*')

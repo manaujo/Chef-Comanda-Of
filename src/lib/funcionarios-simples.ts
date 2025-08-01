@@ -13,6 +13,9 @@ export interface FuncionarioSimples {
 
 export const funcionariosSimplesService = {
   async getAll() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('funcionarios_simples')
       .select('*')
@@ -23,11 +26,15 @@ export const funcionariosSimplesService = {
   },
 
   async getByTipo(tipo: FuncionarioTipo) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('funcionarios_simples')
       .select('*')
       .eq('tipo', tipo)
       .eq('ativo', true)
+      .eq('user_id', user.id)
       .order('nome');
     
     if (error) throw error;
@@ -46,6 +53,9 @@ export const funcionariosSimplesService = {
   },
 
   async create(funcionario: Omit<FuncionarioSimples, 'id' | 'created_at' | 'updated_at'>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('funcionarios_simples')
       .insert(funcionario)

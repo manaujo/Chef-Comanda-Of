@@ -25,9 +25,13 @@ import type { FuncionarioSimples } from './funcionarios-simples';
 // Profiles
 export const profilesService = {
   async getAll() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
+      .eq('id', user.id)
       .order('nome_completo');
     
     if (error) throw error;
@@ -81,6 +85,9 @@ export const profilesService = {
 // Categorias
 export const categoriasService = {
   async getAll() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('categorias')
       .select('*')
@@ -127,6 +134,9 @@ export const categoriasService = {
 // Produtos
 export const produtosService = {
   async getAll() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('produtos')
       .select(`
@@ -141,6 +151,9 @@ export const produtosService = {
   },
 
   async getByCategoria() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('produtos')
       .select(`
@@ -210,6 +223,9 @@ export const produtosService = {
 // Mesas
 export const mesasService = {
   async getAll() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('mesas')
       .select('*')
@@ -279,6 +295,9 @@ export const mesasService = {
 // Comandas
 export const comandasService = {
   async getAll() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('comandas')
       .select(`
@@ -298,6 +317,9 @@ export const comandasService = {
   },
 
   async getAbertas() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('comandas')
       .select(`
@@ -318,6 +340,9 @@ export const comandasService = {
   },
 
   async getByMesa(mesaId: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('comandas')
       .select(`
@@ -516,6 +541,9 @@ export const comandaItensService = {
 // Comandas prontas para fechamento (PDV)
 export const pdvService = {
   async getComandasProntasParaFechamento() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('comandas')
       .select(`
@@ -539,6 +567,9 @@ export const pdvService = {
 // Insumos
 export const insumosService = {
   async getAll() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('insumos')
       .select('*')
@@ -550,15 +581,23 @@ export const insumosService = {
   },
 
   async getEstoqueBaixo() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('insumos')
       .select('*')
       .eq('ativo', true)
-      .filter('quantidade_estoque', 'lte', 'estoque_minimo')
       .order('nome');
     
     if (error) throw error;
-    return data as Insumo[];
+    
+    // Filtrar no cliente para comparar saldo_atual com estoque_minimo
+    const estoqueBaixo = data.filter(insumo => 
+      (insumo.saldo_atual || 0) <= (insumo.estoque_minimo || 0)
+    );
+    
+    return estoqueBaixo as Insumo[];
   },
 
   async create(insumo: Omit<Insumo, 'id' | 'created_at' | 'updated_at'>) {
@@ -597,6 +636,9 @@ export const insumosService = {
 // Turnos
 export const turnosService = {
   async getTurnoAtivo() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('turnos')
       .select(`
@@ -608,11 +650,19 @@ export const turnosService = {
       .is('data_fechamento', null)
       .single();
     
-    if (error && error.code !== 'PGRST116') throw error;
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      throw error;
+    }
     return data as Turno | null;
   },
 
   async abrir(operador_id: string, valor_inicial: number) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('turnos')
       .insert({
@@ -631,6 +681,9 @@ export const turnosService = {
   },
 
   async abrirComFuncionario(operador_id: string, operador_funcionario_id: string, valor_inicial: number) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('turnos')
       .insert({
@@ -675,6 +728,9 @@ export const turnosService = {
 // Vendas
 export const vendasService = {
   async create(venda: Omit<Venda, 'id' | 'created_at'>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('vendas')
       .insert(venda)
@@ -691,6 +747,9 @@ export const vendasService = {
   },
 
   async getByPeriodo(dataInicio: string, dataFim: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('vendas')
       .select(`
