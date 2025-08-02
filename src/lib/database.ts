@@ -1,7 +1,5 @@
 import { supabase } from './supabase';
-import { funcionariosService } from './funcionarios';
 import { funcionariosSimplesService } from './funcionarios-simples';
-import { insumosEstoqueService } from './estoque';
 import type { 
   Profile, 
   Mesa, 
@@ -10,7 +8,6 @@ import type {
   Comanda, 
   ComandaItem, 
   Insumo,
-  ProdutoInsumo,
   Turno,
   Venda,
   Log,
@@ -20,7 +17,6 @@ import type {
   ItemStatus,
   CategoriaProduto
 } from '../types/database';
-import type { FuncionarioSimples } from './funcionarios-simples';
 
 // Profiles
 export const profilesService = {
@@ -31,7 +27,6 @@ export const profilesService = {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', user.id)
       .order('nome_completo');
     
     if (error) throw error;
@@ -85,8 +80,6 @@ export const profilesService = {
 // Categorias
 export const categoriasService = {
   async getAll() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuário não autenticado');
 
     const { data, error } = await supabase
       .from('categorias')
@@ -134,8 +127,6 @@ export const categoriasService = {
 // Produtos
 export const produtosService = {
   async getAll() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuário não autenticado');
 
     const { data, error } = await supabase
       .from('produtos')
@@ -151,8 +142,6 @@ export const produtosService = {
   },
 
   async getByCategoria() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuário não autenticado');
 
     const { data, error } = await supabase
       .from('produtos')
@@ -223,8 +212,6 @@ export const produtosService = {
 // Mesas
 export const mesasService = {
   async getAll() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuário não autenticado');
 
     const { data, error } = await supabase
       .from('mesas')
@@ -295,8 +282,6 @@ export const mesasService = {
 // Comandas
 export const comandasService = {
   async getAll() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuário não autenticado');
 
     const { data, error } = await supabase
       .from('comandas')
@@ -317,8 +302,6 @@ export const comandasService = {
   },
 
   async getAbertas() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuário não autenticado');
 
     const { data, error } = await supabase
       .from('comandas')
@@ -340,8 +323,6 @@ export const comandasService = {
   },
 
   async getByMesa(mesaId: string) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuário não autenticado');
 
     const { data, error } = await supabase
       .from('comandas')
@@ -360,7 +341,7 @@ export const comandasService = {
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data as Comanda[];
+    return data?.[0] as Comanda | null;
   },
 
   async getById(id: string) {
@@ -541,8 +522,6 @@ export const comandaItensService = {
 // Comandas prontas para fechamento (PDV)
 export const pdvService = {
   async getComandasProntasParaFechamento() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuário não autenticado');
 
     const { data, error } = await supabase
       .from('comandas')
@@ -567,8 +546,6 @@ export const pdvService = {
 // Insumos
 export const insumosService = {
   async getAll() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuário não autenticado');
 
     const { data, error } = await supabase
       .from('insumos')
@@ -581,8 +558,6 @@ export const insumosService = {
   },
 
   async getEstoqueBaixo() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuário não autenticado');
 
     const { data, error } = await supabase
       .from('insumos')
@@ -636,8 +611,6 @@ export const insumosService = {
 // Turnos
 export const turnosService = {
   async getTurnoAtivo() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuário não autenticado');
 
     const { data, error } = await supabase
       .from('turnos')
@@ -660,8 +633,6 @@ export const turnosService = {
   },
 
   async abrir(operador_id: string, valor_inicial: number) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuário não autenticado');
 
     const { data, error } = await supabase
       .from('turnos')
@@ -681,8 +652,6 @@ export const turnosService = {
   },
 
   async abrirComFuncionario(operador_id: string, operador_funcionario_id: string, valor_inicial: number) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuário não autenticado');
 
     const { data, error } = await supabase
       .from('turnos')
@@ -728,8 +697,6 @@ export const turnosService = {
 // Vendas
 export const vendasService = {
   async create(venda: Omit<Venda, 'id' | 'created_at'>) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuário não autenticado');
 
     const { data, error } = await supabase
       .from('vendas')
@@ -747,8 +714,6 @@ export const vendasService = {
   },
 
   async getByPeriodo(dataInicio: string, dataFim: string) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuário não autenticado');
 
     const { data, error } = await supabase
       .from('vendas')
@@ -766,6 +731,184 @@ export const vendasService = {
   }
 };
 
+// Entradas de Estoque
+export const entradasEstoqueService = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('entradas_estoque')
+      .select(`
+        *,
+        insumo:insumos(*)
+      `)
+      .order('data_entrada', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async getByPeriodo(dataInicio: string, dataFim: string) {
+    const { data, error } = await supabase
+      .from('entradas_estoque')
+      .select(`
+        *,
+        insumo:insumos(*)
+      `)
+      .gte('data_entrada', dataInicio)
+      .lte('data_entrada', dataFim)
+      .order('data_entrada', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async create(entrada: Omit<any, 'id' | 'valor_unitario' | 'created_at'>) {
+    const { data, error } = await supabase
+      .from('entradas_estoque')
+      .insert(entrada)
+      .select(`
+        *,
+        insumo:insumos(*)
+      `)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+};
+
+// Saídas de Estoque
+export const saidasEstoqueService = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('saidas_estoque')
+      .select(`
+        *,
+        insumo:insumos(*)
+      `)
+      .order('data_saida', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async getByPeriodo(dataInicio: string, dataFim: string) {
+    const { data, error } = await supabase
+      .from('saidas_estoque')
+      .select(`
+        *,
+        insumo:insumos(*)
+      `)
+      .gte('data_saida', dataInicio)
+      .lte('data_saida', dataFim)
+      .order('data_saida', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async create(saida: Omit<any, 'id' | 'created_at'>) {
+    const { data, error } = await supabase
+      .from('saidas_estoque')
+      .insert(saida)
+      .select(`
+        *,
+        insumo:insumos(*)
+      `)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+};
+
+// Produto-Insumos
+export const produtoInsumosService = {
+  async getByProduto(produtoId: string) {
+    const { data, error } = await supabase
+      .from('produto_insumos')
+      .select(`
+        *,
+        insumo:insumos(*)
+      `)
+      .eq('produto_id', produtoId);
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async create(produtoInsumo: Omit<any, 'id' | 'created_at'>) {
+    const { data, error } = await supabase
+      .from('produto_insumos')
+      .insert(produtoInsumo)
+      .select(`
+        *,
+        insumo:insumos(*)
+      `)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id: string, updates: Partial<any>) {
+    const { data, error } = await supabase
+      .from('produto_insumos')
+      .update(updates)
+      .eq('id', id)
+      .select(`
+        *,
+        insumo:insumos(*)
+      `)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async delete(id: string) {
+    const { error } = await supabase
+      .from('produto_insumos')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Histórico de Turnos
+export const historicoTurnosService = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('turnos')
+      .select(`
+        *,
+        operador:profiles(*),
+        operador_funcionario:funcionarios_simples(*)
+      `)
+      .eq('ativo', false)
+      .order('data_abertura', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async getByPeriodo(dataInicio: string, dataFim: string) {
+    const { data, error } = await supabase
+      .from('turnos')
+      .select(`
+        *,
+        operador:profiles(*),
+        operador_funcionario:funcionarios_simples(*)
+      `)
+      .eq('ativo', false)
+      .gte('data_abertura', dataInicio)
+      .lte('data_abertura', dataFim)
+      .order('data_abertura', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  }
+};
 // Logs
 export const logsService = {
   async create(log: Omit<Log, 'id' | 'created_at'>) {

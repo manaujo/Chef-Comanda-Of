@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Mesas from "./pages/Mesas";
+import MesaDetalhes from "./pages/MesaDetalhes";
 import ComandaDetalhes from "./pages/ComandaDetalhes";
 import Comandas from "./pages/Comandas";
 import Cozinha from "./pages/Cozinha";
@@ -55,7 +56,27 @@ const App = () => (
           <Route
             path="/mesas"
             element={
-              <Mesas />
+              <ProtectedRoute
+                allowedRoles={[
+                  "administrador",
+                  "garcom"
+                ]}
+              >
+                <Mesas />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mesa/:id"
+            element={
+              <ProtectedRoute
+                allowedRoles={[
+                  "administrador",
+                  "garcom"
+                ]}
+              >
+                <MesaDetalhes />
+              </ProtectedRoute>
             }
           />
           <Route
@@ -87,7 +108,9 @@ const App = () => (
           <Route
             path="/pdv"
             element={
-              <PDV />
+              <ProtectedRoute allowedRoles={["administrador", "caixa"]}>
+                <PDV />
+              </ProtectedRoute>
             }
           />
           <Route
@@ -101,7 +124,9 @@ const App = () => (
           <Route
             path="/estoque"
             element={
-              <Estoque />
+              <ProtectedRoute allowedRoles={["administrador", "estoque"]}>
+                <Estoque />
+              </ProtectedRoute>
             }
           />
           <Route
