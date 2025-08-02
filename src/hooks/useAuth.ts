@@ -1,140 +1,187 @@
-import { useState, useEffect } from 'react'
-import { User } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
-import { getCurrentUser } from '@/lib/auth'
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
+import { getCurrentUser, User } from "../lib/auth";
+import { funcionariosAuthService, type Funcionario } from "../lib/funcionarios";
+
+export type UserType = "admin" | "funcionario";
+
+export interface AuthUser {
+  id: string;
+  email?: string;
+  nome: string;
+  tipo: UserType;
+  userData: User | Funcionario;
+}
 
 export const useAuth = () => {
-  const [user, setUser] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Verificar sessão atual
-    const checkSession = async () => {
+    // Verificar usuário inicial
+    const initAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          // Buscar dados completos do usuário
-          const userData = await getCurrentUser();
-          setUser(userData);
+        console.log("🔍 Iniciando verificação de autenticação...");
+
+        // Verificar se o Supabase está configurado
+        const {
+          data: { session }
+        } = await supabase.auth.getSession();
+        console.log("📋 Sessão atual:", session ? "Existe" : "Não existe");
+
+        if (session) {
+          console.log("👤 Usuário na sessão:", session.user.email);
+
+          // Tentar detectar se é administrador ou funcionário
+          const email = session.user.email;
+
+          if (email && !email.includes("@chefcomanda.com")) {
+            // É um administrador (email real)
+            console.log("👑 Detectado como administrador");
+            const userData = await getCurrentUser();
+            if (userData) {
+              setUser({
+                id: userData.id,
+                email: userData.email,
+                nome: userData.nome_completo,
+                tipo: "admin",
+                userData
+              });
+            }
+          } else {
+            // É um funcionário (email com @chefcomanda.com)
+            console.log("👷 Detectado como funcionário");
+            const funcionarioData = await funcionariosAuthService.getCurrentFuncionario();
+            if (funcionarioData) {
+              setUser({
+                id: funcionarioData.id,
+                nome: funcionarioData.nome,
+                tipo: "funcionario",
+                userData: funcionarioData
+              });
+            }
+          }
         } else {
+          console.log("❌ Nenhuma sessão encontrada");
           setUser(null);
         }
       } catch (error) {
-        console.error('Error checking session:', error);
+        console.error("💥 Erro na autenticação:", error);
         setUser(null);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
-    
-    checkSession();
 
-    // Escutar mudanças de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (session?.user) {
-          try {
+    initAuth();
+
+    // Escutar mudanças na autenticação
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("🔄 Evento de autenticação:", event);
+      console.log("📧 Email do usuário:", session?.user?.email);
+
+      if (event === "SIGNED_IN" && session?.user) {
+        try {
+          console.log("✅ Usuário logado, detectando tipo...");
+          const email = session.user.email;
+
+          if (email && !email.includes("@chefcomanda.com")) {
+            // É um administrador
+            console.log("👑 Detectado como administrador");
             const userData = await getCurrentUser();
-            setUser(userData);
-          } catch (error) {
-            console.error('Error getting user data:', error);
-            setUser(null);
+            if (userData) {
+              setUser({
+                id: userData.id,
+                email: userData.email,
+                nome: userData.nome_completo,
+                tipo: "admin",
+                userData
+              });
+            }
+          } else {
+            // É um funcionário
+            console.log("👷 Detectado como funcionário");
+            const funcionarioData = await funcionariosAuthService.getCurrentFuncionario();
+            if (funcionarioData) {
+              setUser({
+                id: funcionarioData.id,
+                nome: funcionarioData.nome,
+                tipo: "funcionario",
+                userData: funcionarioData
+              });
+            }
           }
-        } else {
+        } catch (error) {
+          console.error("💥 Erro ao buscar dados do usuário:", error);
           setUser(null);
         }
-        setLoading(false);
-      }
-    );
+      } else if (event === "SIGNED_OUT") {
+        console.log("🚪 Usuário desconectado");
+        setUser(null);
+      } else if (event === "INITIAL_SESSION" && session?.user) {
+        try {
+          console.log("🔄 Sessão inicial encontrada, detectando tipo...");
+          const email = session.user.email;
 
-    return () => subscription.unsubscribe()
-  }, [])
-
-  const signIn = async (email: string, password: string) => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (error) {
-        return { data: null, error };
-      }
-      
-      // Buscar dados completos do usuário após login
-      if (data.user) {
-        const userData = await getCurrentUser();
-        setUser(userData);
-      }
-      
-      return { data, error: null };
-    } catch (error) {
-      console.error('Error in signIn:', error);
-      return { data: null, error };
-    }
-  }
-
-  const signUp = async (email: string, password: string, userData: any) => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            nome_completo: userData.nomeCompleto,
-            nome_restaurante: userData.nomeRestaurante,
-            cpf: userData.cpf,
-            telefone: userData.telefone
+          if (email && !email.includes("@chefcomanda.com")) {
+            // É um administrador
+            console.log("👑 Detectado como administrador");
+            const userData = await getCurrentUser();
+            if (userData) {
+              setUser({
+                id: userData.id,
+                email: userData.email,
+                nome: userData.nome_completo,
+                tipo: "admin",
+                userData
+              });
+            }
+          } else {
+            // É um funcionário
+            console.log("👷 Detectado como funcionário");
+            const funcionarioData = await funcionariosAuthService.getCurrentFuncionario();
+            if (funcionarioData) {
+              setUser({
+                id: funcionarioData.id,
+                nome: funcionarioData.nome,
+                tipo: "funcionario",
+                userData: funcionarioData
+              });
+            }
           }
-        }
-      });
-      
-      if (error) {
-        return { data: null, error };
-      }
-      
-      // Criar perfil do usuário
-      if (data.user) {
-        const { error: profileError } = await supabase.from("profiles").insert([
-          {
-            id: data.user.id,
-            email: email,
-            nome_completo: userData.nomeCompleto,
-            nome_restaurante: userData.nomeRestaurante,
-            cpf: userData.cpf,
-            telefone: userData.telefone,
-            tipo: 'administrador'
-          }
-        ]);
-        
-        if (profileError) {
-          console.error('Erro ao criar perfil:', profileError);
+        } catch (error) {
+          console.error("💥 Erro ao buscar dados da sessão inicial:", error);
+          setUser(null);
         }
       }
+      setIsLoading(false);
+    });
 
-      return { data, error: null };
-    } catch (error) {
-      console.error('Error in signUp:', error);
-      return { data: null, error };
-    }
-  }
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
-  const signOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      setUser(null);
-      return { error };
-    } catch (error) {
-      console.error('Error in signOut:', error);
-      return { error };
-    }
-  }
+  const isAuthenticated = !!user;
+  const isAdmin = user?.tipo === "admin";
+  const isFuncionario = user?.tipo === "funcionario";
+
+  console.log("🎯 Estado atual do useAuth:", {
+    user: !!user,
+    isLoading,
+    isAuthenticated,
+    tipo: user?.tipo,
+    isAdmin,
+    isFuncionario
+  });
 
   return {
     user,
-    loading,
-    signIn,
-    signUp,
-    signOut,
-  }
-}
+    isLoading,
+    isAuthenticated,
+    isAdmin,
+    isFuncionario
+  };
+};

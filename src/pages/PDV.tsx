@@ -121,15 +121,10 @@ const PDV = () => {
       const desconto = parseFloat(valorDesconto) || 0;
       const total = calcularTotal();
 
-      // Verificar se temos um operador válido
-      const operadorId = turnoAtivo.operador_id;
-      if (!operadorId) {
-        throw new Error('Operador do turno não encontrado');
-      }
       await vendasService.create({
         comanda_id: comandaSelecionada.id,
         turno_id: turnoAtivo.id,
-        operador_id: operadorId,
+        operador_id: turnoAtivo.operador_funcionario_id || turnoAtivo.operador_id,
         valor_total: subtotal,
         valor_desconto: desconto,
         valor_final: total,
