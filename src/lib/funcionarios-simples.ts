@@ -49,9 +49,15 @@ export const funcionariosSimplesService = {
 
   async create(funcionario: Omit<FuncionarioSimples, 'id' | 'created_at' | 'updated_at'>) {
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('funcionarios_simples')
-      .insert(funcionario)
+      .insert({
+        ...funcionario,
+        user_id: user.id
+      })
       .select()
       .single();
     

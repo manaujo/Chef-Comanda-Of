@@ -8,11 +8,5 @@ export {
   produtoInsumosService,
   historicoTurnosService
 } from './database';
-
-// Serviços para Insumos
-export const insumosEstoqueService = {
-  async getAll() {
-  }
-}
 // Type exports for compatibility
 export type { Insumo } from '../types/database';

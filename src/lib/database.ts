@@ -235,9 +235,15 @@ export const mesasService = {
   },
 
   async create(mesa: Omit<Mesa, 'id' | 'created_at' | 'updated_at' | 'qr_code'>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { data, error } = await supabase
       .from('mesas')
-      .insert(mesa)
+      .insert({
+        ...mesa,
+        user_id: user.id
+      })
       .select()
       .single();
     
@@ -621,22 +627,20 @@ export const turnosService = {
       `)
       .eq('ativo', true)
       .is('data_fechamento', null)
-      .single();
+      .maybeSingle();
     
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return null;
-      }
-      throw error;
-    }
+    if (error) throw error;
     return data as Turno | null;
   },
 
   async abrir(operador_id: string, valor_inicial: number) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
 
     const { data, error } = await supabase
       .from('turnos')
       .insert({
+        user_id: user.id,
         operador_id,
         valor_inicial,
         ativo: true
@@ -652,10 +656,13 @@ export const turnosService = {
   },
 
   async abrirComFuncionario(operador_id: string, operador_funcionario_id: string, valor_inicial: number) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
 
     const { data, error } = await supabase
       .from('turnos')
       .insert({
+        user_id: user.id,
         operador_id,
         operador_funcionario_id,
         valor_inicial,
